@@ -1,4 +1,14 @@
-import { Controller, Get, HttpCode, HttpStatus, Inject, ServiceUnavailableException } from '@nestjs/common';
+import {
+    Controller,
+    Get,
+    HttpCode,
+    HttpStatus,
+    Inject,
+    ServiceUnavailableException,
+    VERSION_NEUTRAL,
+} from '@nestjs/common';
+
+import { Public } from '../auth/public.decorator';
 
 import { READINESS_CHECKS, type ReadinessCheck } from './readiness-check.interface';
 
@@ -25,8 +35,13 @@ interface ReadinessResponse {
  *
  * Both are deliberately unauthenticated — the load balancer has no credentials — so they
  * report status and nothing about configuration or versions.
+ *
+ * The controller is **version-neutral**: under URI versioning it stays on `/health`, never
+ * `/v1/health`. A probe URL must not move when the API contract version does, or shipping v2
+ * silently fails every health check that was configured against v1.
  */
-@Controller('health')
+@Public()
+@Controller({ path: 'health', version: VERSION_NEUTRAL })
 export class HealthController {
     constructor(@Inject(READINESS_CHECKS) private readonly checks: ReadinessCheck[]) {}
 

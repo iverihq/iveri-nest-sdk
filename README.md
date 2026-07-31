@@ -167,6 +167,31 @@ the instance out of rotation.
 `DatabaseReadinessCheck` runs `SELECT 1` rather than reading `dataSource.isInitialized` — that
 flag stays `true` after the connection drops.
 
+Both routes are `VERSION_NEUTRAL` and `@Public()`. **A probe URL must not move when the API
+contract version does** — under URI versioning an unmarked controller lands on `/v1/health`,
+so shipping v2 silently breaks every probe configured against v1. And a load balancer holds no
+credentials, so a global `AuthGuard` that does not honour `@Public()` 401s the probe and takes
+the whole service out of rotation. Version 0.1.0 shipped without either; 0.1.1 adds them.
+
+## `auth/`
+
+`@Public()` and `IS_PUBLIC_KEY`, the metadata seam between a service's `AuthGuard` and the
+routes that must stay open.
+
+```ts
+@Public()
+@Post('login')
+login(@Body() body: LoginInputDto) {}
+```
+
+The guard itself stays in the service for now — identity is its only implementation, so there
+is nothing to generalise from yet (second-consumer rule). Only the decorator lives here,
+because the SDK's own `HealthController` has to carry it.
+
+Register the guard globally and treat `@Public()` as the exception. **Authentication as the
+default is what makes a forgotten decorator fail closed**; opt-in guards fail open, silently,
+on the one route nobody re-reviewed.
+
 ---
 
 ## What is deliberately not here yet

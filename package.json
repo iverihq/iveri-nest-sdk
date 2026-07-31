@@ -50,9 +50,9 @@
     "typeorm": "^0.3.20"
   },
   "devDependencies": {
-    "@iveri/eslint-config": "^0.1.1",
+    "@iveri/eslint-config": "^0.1.2",
     "@iveri/prettier-config": "^0.1.0",
-    "@iveri/tsconfig": "^0.1.0",
+    "@iveri/tsconfig": "^0.1.1",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.0.1",

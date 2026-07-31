@@ -13,14 +13,14 @@ importers:
         version: 0.1.0
     devDependencies:
       '@iveri/eslint-config':
-        specifier: ^0.1.1
-        version: 0.1.1(@typescript-eslint/parser@8.65.0(eslint@9.39.5)(typescript@5.9.3))(eslint@9.39.5)(typescript@5.9.3)
+        specifier: ^0.1.2
+        version: 0.1.2(@typescript-eslint/parser@8.65.0(eslint@9.39.5)(typescript@5.9.3))(eslint@9.39.5)(typescript@5.9.3)
       '@iveri/prettier-config':
         specifier: ^0.1.0
         version: 0.1.0(prettier@3.9.6)
       '@iveri/tsconfig':
-        specifier: ^0.1.0
-        version: 0.1.0
+        specifier: ^0.1.1
+        version: 0.1.1
       '@nestjs/common':
         specifier: ^11.0.1
         version: 11.1.28(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -323,8 +323,8 @@ packages:
     resolution: {integrity: sha512-rQCmbMmUzPMGfUQG0/l9N5rShGHn0JkaUFsQhef3PuVY0TmuEBp5eGT0D7K3qe2caETGn4U2GpkDGpZ1n71wiQ==}
     engines: {node: '>=22'}
 
-  '@iveri/eslint-config@0.1.1':
-    resolution: {integrity: sha512-X2F2csdGSGweAit6gJAxKowjQ2dByd9p4qOsQccvQX+HcDkqgUQK0hcfJvIVTvqIeEVP9xV43DxmAygifv0aBQ==}
+  '@iveri/eslint-config@0.1.2':
+    resolution: {integrity: sha512-wL3DtvpVpVZPlymEMzq8KzLQh5Whc8sfcHw0Cqlhf6DhE8uH/64RDJSJh3VLKpjZhIydTKTCZ0nI6d8aXY8SXg==}
     engines: {node: '>=22'}
     peerDependencies:
       eslint: '>=9'
@@ -336,8 +336,8 @@ packages:
     peerDependencies:
       prettier: '>=3'
 
-  '@iveri/tsconfig@0.1.0':
-    resolution: {integrity: sha512-zPsxKoLRQGF0S77WAwqRrY6pEcWtu5UDFTJ0WwprtEcgJzXVbJ91Z6GNvvvCkTRq26372nUHytOjgjDvIJn0qg==}
+  '@iveri/tsconfig@0.1.1':
+    resolution: {integrity: sha512-oxebZ+ytg7Bn2AgwPLTx3gXyV/82I71bTU/AMquo0X3QtfIzetccjk4khfInzK10c972Wg7Q/kqRNgH9jvbu4A==}
     engines: {node: '>=22'}
 
   '@jest/console@29.7.0':
@@ -2719,7 +2719,7 @@ snapshots:
 
   '@iveri/contracts@0.1.0': {}
 
-  '@iveri/eslint-config@0.1.1(@typescript-eslint/parser@8.65.0(eslint@9.39.5)(typescript@5.9.3))(eslint@9.39.5)(typescript@5.9.3)':
+  '@iveri/eslint-config@0.1.2(@typescript-eslint/parser@8.65.0(eslint@9.39.5)(typescript@5.9.3))(eslint@9.39.5)(typescript@5.9.3)':
     dependencies:
       '@eslint/js': 9.39.5
       eslint: 9.39.5
@@ -2740,7 +2740,7 @@ snapshots:
     dependencies:
       prettier: 3.9.6
 
-  '@iveri/tsconfig@0.1.0': {}
+  '@iveri/tsconfig@0.1.1': {}
 
   '@jest/console@29.7.0':
     dependencies:
