@@ -1,7 +1,7 @@
 # @iveri/nest-sdk
 
 The NestJS plumbing every Iveri service shares: request context, typed exceptions,
-tenant-scoped persistence, config validation, health endpoints.
+tenant-scoped persistence, config validation, health endpoints, Redis and rate limiting.
 
 ```bash
 pnpm add @iveri/nest-sdk @iveri/contracts
@@ -194,9 +194,71 @@ on the one route nobody re-reviewed.
 
 ---
 
+## `redis/` and `rate-limit/` — a token bucket, and the connection under it
+
+Extracted from `conduit-api` once `iveri-identity-api` became the second consumer, not designed
+in advance. `ioredis` is a **peer dependency**: the root barrel loads it, and every service with
+a public endpoint needs a limit on it (§17).
+
+```ts
+// app.module.ts
+RedisModule.forRootAsync({
+    inject: [ConfigService],
+    useFactory: (configService: ConfigService<AppEnvConfig, true>) => ({
+        url: configService.get('REDIS_URL', { infer: true }),
+        commandTimeoutMs: configService.get('REDIS_COMMAND_TIMEOUT_MS', { infer: true }),
+    }),
+}),
+RateLimitModule.forRoot({ namespace: 'conduit' }),
+```
+
+```ts
+const decision = await this.rateLimitService.consume({
+    input: {
+        scope: RateLimitScope.AUTH, // your enum — see below
+        hashTag: hashRateLimitIdentifier(tenantSlug),
+        policy: { perMinute: 30, burst: 10 },
+        now: new Date(),
+    },
+});
+```
+
+Four things about it are decisions rather than details:
+
+- **It fails open.** Unreachable Redis means the request is allowed and `isEnforced` is `false`.
+  Rate limiting bounds resource exhaustion; it authorizes nothing, and the checks that decide
+  whether a caller may be here at all fail closed without touching Redis. A service wanting the
+  opposite reads `isEnforced` and refuses at its own call site, where the reasoning is visible —
+  there is no flag for it, because taking a whole surface down should not be a boolean.
+- **A bucket, not a window.** A fixed window lets a caller spend a full allowance either side of
+  a boundary, and conflates the sustained rate with the burst. Real traffic arrives in spikes.
+- **`scope` is a `string`, not an SDK enum.** Which surfaces exist and which deserve their own
+  bucket is the genuinely service-specific part. Declare your own enum and pass a member.
+- **No URL is a supported state.** `RedisService.getClient()` returns `null` and consumers
+  degrade. Whether that is acceptable is a question about your service — enforce it in your own
+  env validation, where the condition can be written honestly.
+
+**The guard is not here**, on purpose. How a key is chosen — which route counts against which
+identity — belongs beside the routes it protects. `conduit-api`'s `RateLimitGuard` is the
+reference: ingress per endpoint token before any database read, everything authenticated per
+principal with no decorator.
+
+Keys are `<namespace>:ratelimit:<scope>:{<hashTag>}[:<suffix>]`. The braces are a cluster hash
+tag — single-key operations do not need one, but adding tags later means rewriting keys a live
+system is already reading. Run anything that is itself a credential through
+`hashRateLimitIdentifier` first; Redis keys surface in `MONITOR`, `SLOWLOG` and `--bigkeys`.
+
+---
+
 ## What is deliberately not here yet
 
 `outbox/`, `inbox/`, `lock/`, `http/`, `pagination/`, `swagger/` and `observability/` are in
 the plan and unwritten. Per the second-consumer rule, they get written in the service that
-first needs them — outbox/inbox/lock in Conduit gateway mode (build-order step 4) — and are
-pushed down here once they are proven by real use. Nothing is extracted in anticipation.
+first needs them and are pushed down here once proven by real use. Nothing is extracted in
+anticipation.
+
+`outbox/` is the interesting one: Conduit gateway mode (build-order step 4) wrote a
+**specialised** queue rather than the generic module — its rows carry a target URL, an attempt
+budget and a next-attempt time, which are the columns its indexes and its DLQ view depend on.
+That table is now the reference for what the generic claim/retry/dead-letter machinery should
+look like here, once a service publishes a real cross-service event.
