@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@iveri/contracts':
-        specifier: ^0.8.0
-        version: 0.8.0
+        specifier: ^0.9.0
+        version: 0.9.0
     devDependencies:
       '@iveri/eslint-config':
         specifier: ^0.1.2
@@ -328,8 +328,8 @@ packages:
     resolution: {integrity: sha512-+Sg6GCR/wy1oSmQDFq4LQDAhm3ETKnorxN+y5nbLULOR3P0c14f2Wurzj3/xqPXtasLFfHd5iRFQ7AJt4KH2cw==}
     engines: {node: '>=8'}
 
-  '@iveri/contracts@0.8.0':
-    resolution: {integrity: sha512-nXYIHYLwpht6qfFYpCDTmuyY9Yo+DO/58tLdqh4VBdWoEThiANZtqdPdTOHMLxBL/ayLJJCNYXtxg/FeAF0H4Q==}
+  '@iveri/contracts@0.9.0':
+    resolution: {integrity: sha512-PhZbLHLK23misXFjH0MKRHRY34yjZdGMNu70w5zbWjEShw/7a9ZtUmRt1pfqXFfhS35LpdCvHgUXkokyrQZdzw==}
     engines: {node: '>=22'}
 
   '@iveri/eslint-config@0.1.2':
@@ -2799,7 +2799,7 @@ snapshots:
 
   '@istanbuljs/schema@0.1.6': {}
 
-  '@iveri/contracts@0.8.0': {}
+  '@iveri/contracts@0.9.0': {}
 
   '@iveri/eslint-config@0.1.2(@typescript-eslint/parser@8.65.0(eslint@9.39.5)(typescript@5.9.3))(eslint@9.39.5)(typescript@5.9.3)':
     dependencies:
