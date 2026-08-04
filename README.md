@@ -4,6 +4,9 @@ The NestJS plumbing every Iveri service shares: request context, authentication 
 authorization, typed exceptions, tenant-scoped persistence, config validation, health endpoints,
 Redis and rate limiting.
 
+Release `0.5.0` aligns the SDK with `@iveri/contracts` `0.9.x`, including the Commerce catalog
+permission contract used by `commerce-api`.
+
 ```bash
 pnpm add @iveri/nest-sdk @iveri/contracts
 ```
