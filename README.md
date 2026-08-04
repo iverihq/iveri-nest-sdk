@@ -1,7 +1,8 @@
 # @iveri/nest-sdk
 
-The NestJS plumbing every Iveri service shares: request context, typed exceptions,
-tenant-scoped persistence, config validation, health endpoints, Redis and rate limiting.
+The NestJS plumbing every Iveri service shares: request context, authentication and
+authorization, typed exceptions, tenant-scoped persistence, config validation, health endpoints,
+Redis and rate limiting.
 
 ```bash
 pnpm add @iveri/nest-sdk @iveri/contracts
@@ -128,9 +129,10 @@ sentence.
 An endpoint reaching a handler with no context is misconfigured, and failing loudly there is
 the difference between a 401 and a query that silently runs untenanted.
 
-> The guard that populates it ships with `iveri-identity-api` (build-order step 2). Until then
-> the decorator is the seam and nothing more. `@CurrentAuth` — named in the workspace guide —
-> arrives with that guard, when there is an auth principal for it to return.
+> The guard that populates it is `AuthGuard`, below — it moved here in 0.3.0. A service
+> narrowing the context to `AuthenticatedRequestContext` gets `apiKeyId` alongside `userId`.
+> `@CurrentAuth` — named in the workspace guide — was never built; `@CurrentRequestContext()`
+> with a narrowed parameter type does the same job with one decorator instead of two.
 
 ## `config/` — validate at startup, or do not start
 
@@ -173,24 +175,72 @@ so shipping v2 silently breaks every probe configured against v1. And a load bal
 credentials, so a global `AuthGuard` that does not honour `@Public()` 401s the probe and takes
 the whole service out of rotation. Version 0.1.0 shipped without either; 0.1.1 adds them.
 
-## `auth/`
+## `auth/` — verifying an identity token
 
-`@Public()` and `IS_PUBLIC_KEY`, the metadata seam between a service's `AuthGuard` and the
-routes that must stay open.
+`AuthModule`, `AccessTokenService`, `AuthGuard`, `PermissionGuard`, `@RequirePermission()`,
+`@Public()`, and `AuthenticatedRequestContext`.
+
+```ts
+// app.module.ts
+AuthModule.forRootAsync({
+    inject: [ConfigService],
+    useFactory: (configService: ConfigService<AppEnvConfig, true>) => ({
+        secret: configService.get('JWT_SECRET', { infer: true }),
+        issuer: configService.get('JWT_ISSUER', { infer: true }),
+        audience: configService.get('JWT_AUDIENCE', { infer: true }),
+    }),
+});
+
+// …and register the guards yourself, in the order this service wants:
+providers: [
+    { provide: APP_GUARD, useClass: AuthGuard },
+    { provide: APP_GUARD, useClass: RateLimitGuard },
+    { provide: APP_GUARD, useClass: PermissionGuard },
+];
+```
 
 ```ts
 @Public()
 @Post('login')
 login(@Body() body: LoginInputDto) {}
+
+@RequirePermission(UserPermission.UNIBOX_MESSAGE_SEND)
+@Post(':conversationId/messages')
+sendMessage() {}
 ```
 
-The guard itself stays in the service for now — identity is its only implementation, so there
-is nothing to generalise from yet (second-consumer rule). Only the decorator lives here,
-because the SDK's own `HealthController` has to carry it.
+Register `AuthGuard` globally and treat `@Public()` as the exception. **Authentication as the
+default is what makes a forgotten decorator fail closed**; opt-in guards fail open, silently, on
+the one route nobody re-reviewed.
 
-Register the guard globally and treat `@Public()` as the exception. **Authentication as the
-default is what makes a forgotten decorator fail closed**; opt-in guards fail open, silently,
-on the one route nobody re-reviewed.
+**This module verifies and cannot sign.** There is no `sign` method and no `signOptions`, on
+purpose: the moment a consuming service can issue a token it becomes a second identity provider,
+and the shared secret stops being a verification key and starts being a minting key in every repo
+that holds it.
+
+**The guards are exported as classes, not registered by the module.** Guard _order_ is a
+service-level decision with real consequences — `conduit-api` puts its rate limiter between
+authentication and authorization so a caller hammering a route they lack permission for is slowed
+down rather than merely refused. A module that registered its own `APP_GUARD` would take that
+decision away and hide it.
+
+### Why it lives here, and what stayed behind
+
+Extracted when `unibox-api` became the **third** consumer. `conduit-api` was the second and it was
+not extracted then; on the third it stopped being a judgement call, because three copies of the
+code that decides who may do what is how a security control diverges silently — the same argument
+that moved the token bucket in 0.2.0.
+
+`iveri-identity-api` keeps its own guard, and that is not a leftover. Identity's has a second,
+API-key branch it can afford because the key is a row in its own database. Every other service
+would have to call identity to check one, which is the exact cost the stateless-JWT design exists
+to avoid — so a verifying service has one branch, and a machine gets in by trading its key for a
+token at identity's `POST /auth/token`.
+
+`AuthenticatedRequestContext` carries **both** `userId` and `apiKeyId`, exactly one of them set.
+Code that attributes a change to a person must handle `null`: a service token's `sub` is an
+`api_key.id`, and writing it to `userId` puts it in audit columns naming somebody who does not
+exist.
 
 ---
 

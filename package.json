@@ -1,7 +1,7 @@
 {
   "name": "@iveri/nest-sdk",
   "version": "0.2.0",
-  "description": "Shared NestJS plumbing for Iveri services — request context, typed exceptions, tenant-scoped persistence, config validation, health, Redis, rate limiting",
+  "description": "Shared NestJS plumbing for Iveri services \u2014 request context, auth guards, typed exceptions, tenant-scoped persistence, config validation, health, Redis, rate limiting",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -36,12 +36,13 @@
   },
   "prettier": "@iveri/prettier-config",
   "dependencies": {
-    "@iveri/contracts": "^0.1.0"
+    "@iveri/contracts": "^0.8.0"
   },
   "peerDependencies": {
     "@nestjs/common": "^11.0.0",
     "@nestjs/config": "^4.0.0",
     "@nestjs/core": "^11.0.0",
+    "@nestjs/jwt": "^11.0.0",
     "@nestjs/typeorm": "^11.0.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.0",
@@ -57,6 +58,7 @@
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.0.1",
+    "@nestjs/jwt": "^11.0.2",
     "@nestjs/testing": "^11.0.1",
     "@nestjs/typeorm": "^11.0.0",
     "@types/express": "^5.0.0",
