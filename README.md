@@ -4,7 +4,7 @@ The NestJS plumbing every Iveri service shares: request context, authentication 
 authorization, typed exceptions, tenant-scoped persistence, config validation, health endpoints,
 Redis and rate limiting.
 
-Release `0.8.0` aligns the SDK with `@iveri/contracts` `0.12.x`, including the billing permission
+Release `0.9.0` aligns the SDK with `@iveri/contracts` `0.13.x`, including the billing invoice permission
 catalogue alongside the tenant-scoped MCP
 registry permission contract used by `unibox-ai`.
 
