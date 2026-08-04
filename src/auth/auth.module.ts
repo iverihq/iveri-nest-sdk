@@ -78,7 +78,16 @@ export class AuthModule {
                             // state every claim itself rather than inheriting identity's — which
                             // makes the mistake visible in review instead of producing a token
                             // that looks authentic.
-                            verifyOptions: { issuer: options.issuer, audience: options.audience },
+                            verifyOptions: {
+                                // Pinned, and not a detail. Without it `jsonwebtoken` accepts
+                                // whichever algorithm the token's **own header** names — the
+                                // classic confusion attack, where a forged payload is re-signed
+                                // HS256 using a key the service treats as public. The algorithm
+                                // a verifier accepts must come from the verifier.
+                                algorithms: [options.algorithm ?? 'HS256'],
+                                issuer: options.issuer,
+                                audience: options.audience,
+                            },
                         }),
                 },
                 AccessTokenService,

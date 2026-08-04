@@ -20,6 +20,17 @@ export interface AuthModuleOptions {
 
     /** Expected `aud`. */
     audience: string;
+
+    /**
+     * The single signing algorithm this service will accept. Defaults to `HS256`, which is what
+     * identity signs with.
+     *
+     * **Always a fixed list of one, never "whatever the token says".** Left unpinned,
+     * `jsonwebtoken` honours the `alg` in the token's own header, and an attacker re-signs a
+     * forged payload with `HS256` using a key the service publishes as non-secret. The whole
+     * point is that the verifier decides.
+     */
+    algorithm?: 'HS256' | 'HS384' | 'HS512';
 }
 
 /** Async registration, for reading the values out of `ConfigService`. */
