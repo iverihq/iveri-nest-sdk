@@ -242,6 +242,42 @@ Code that attributes a change to a person must handle `null`: a service token's 
 `api_key.id`, and writing it to `userId` puts it in audit columns naming somebody who does not
 exist.
 
+## `encryption/` — envelope encryption for customers' credentials
+
+```ts
+// The service declares ENCRYPTION_KEY on its own env config; this reads it.
+providers: [EncryptionService];
+
+const stored = encryptionService.encrypt(signingSecret);
+const secret = encryptionService.decrypt(stored);
+```
+
+§11 forbids a plaintext column for anything a customer would call a credential. Across the fleet
+that is Conduit's provider signing secrets and its customers' OAuth credentials, and Unibox's
+channel ingest secrets.
+
+**Envelope, not direct encryption.** Every value gets its own random data key and the master key
+wraps only that. Encrypting values directly with the master key is simpler and is the thing to
+avoid: rotating the master would then mean decrypting and re-encrypting every row, and one key
+would cover unbounded data in a single nonce space. With an envelope, rotation rewrites only the
+wrapped keys — and `wrapDataKey`/`unwrapDataKey` is a one-class change away from being a KMS call,
+which is the reason to structure it this way before deploying rather than after.
+
+The stored form is `v1.<wrapIv>.<wrappedKey>.<wrapTag>.<iv>.<ciphertext+tag>`, all base64 — which
+never emits `.`, so parsing is total. **The `v1` marker is load-bearing**: a KMS-wrapped `v2` is
+recognised by its prefix and `v1` rows keep decrypting through the old path, so the wrapper can be
+replaced without rewriting every row in one transaction and hoping nothing was written meanwhile.
+
+AES-256-GCM, so a tampered ciphertext **fails** rather than decrypting to plausible garbage. A
+secret that silently decrypted to the wrong bytes would present as "the provider changed their
+signature format", sending somebody to debug a third party over a corrupted row of ours.
+
+`secretsMatch` sits beside it: constant-time comparison for signatures and shared secrets. `===`
+stops at the first differing byte and leaks the expected value one byte at a time.
+
+Extracted from `conduit-api` in 0.4.0, when `unibox-api` became the second service holding
+customer credentials — and it gained the specs it had never had on the way across.
+
 ---
 
 ## `redis/` and `rate-limit/` — a token bucket, and the connection under it
