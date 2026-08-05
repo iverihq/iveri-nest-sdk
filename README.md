@@ -4,6 +4,15 @@ The NestJS plumbing every Iveri service shares: request context, authentication 
 authorization, typed exceptions, tenant-scoped persistence, config validation, health endpoints,
 Redis and rate limiting.
 
+Release `0.14.0` moves `@iveri/contracts` from a **dependency to a peer dependency**. It was
+installing a second, older copy of the package underneath the SDK, so anything the SDK typed
+against `UserPermission` saw whichever version the SDK's own caret range resolved — a permission
+added to contracts was then unusable with `@RequirePermission()` until the SDK was re-released,
+and the error (`UserPermission.X is not assignable to UserPermission`) names one type twice and
+says nothing about why. **Every consumer must have `@iveri/contracts` as a direct dependency at
+`>=0.16.0`** — they all did already; this makes it the contract. Check with
+`pnpm ls @iveri/contracts --depth 2`, which should now show exactly one copy.
+
 Release `0.13.0` splits the health endpoint into the three orchestrator probes — `/health/live`,
 `/health/ready` and `/health/startup` — and **removes the bare `GET /health`**. Consumers exclude
 the probes from their global prefix with `HEALTH_ROUTE_EXCLUSIONS`, and the `ReadinessCheck`
