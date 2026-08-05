@@ -9,3 +9,4 @@ export * from './health';
 export * from './rate-limit';
 export * from './redis';
 export * from './repository';
+export * from './swagger';
