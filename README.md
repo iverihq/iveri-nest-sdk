@@ -4,6 +4,11 @@ The NestJS plumbing every Iveri service shares: request context, authentication 
 authorization, typed exceptions, tenant-scoped persistence, config validation, health endpoints,
 Redis and rate limiting.
 
+Release `0.13.0` splits the health endpoint into the three orchestrator probes — `/health/live`,
+`/health/ready` and `/health/startup` — and **removes the bare `GET /health`**. Consumers exclude
+the probes from their global prefix with `HEALTH_ROUTE_EXCLUSIONS`, and the `ReadinessCheck`
+interface is now `HealthCheck`, since the same check can gate readiness, startup or both.
+
 Release `0.10.0` aligns the SDK with `@iveri/contracts` `0.14.x`, including the messaging permission
 catalogue. Release `0.9.0` aligned the SDK with `@iveri/contracts` `0.13.x`, including the billing invoice permission
 catalogue alongside the tenant-scoped MCP
@@ -164,21 +169,44 @@ purpose: every environment variable arrives as a string, and implicit conversion
 
 ```ts
 HealthModule.forRoot({ checks: [DatabaseReadinessCheck] });
+
+// Readiness and startup differ when a dependency is required to boot but survivable to lose.
+HealthModule.forRoot({ checks: [], startupChecks: [RedisStartupCheck] });
 ```
 
-`GET /health` is **liveness** and touches nothing — a database blip that fails liveness gets
-the container killed, turning a recoverable outage into a crash loop. `GET /health/ready` is
-**readiness**, runs the checks, and returns 503 when any is down so the load balancer takes
-the instance out of rotation.
+Three probes, because an orchestrator has three questions and three different remedies:
+
+| Route             | Question                 | Failure remedy                      |
+| ----------------- | ------------------------ | ----------------------------------- |
+| `/health/live`    | Is the process running?  | Kill and restart the container      |
+| `/health/ready`   | Can it serve now?        | Take the instance out of rotation   |
+| `/health/startup` | Has it finished booting? | Kill a container that never came up |
+
+**Liveness touches nothing.** A database blip that fails liveness gets the container killed,
+turning a recoverable outage into a crash loop. **Readiness runs `checks`** and returns 503
+when any is down. **Startup runs `startupChecks`** — defaulting to `checks` — and **latches**:
+once they have all passed once it keeps answering 200, because after boot a dependency failure
+should drain traffic rather than restart the process, and that is readiness's job.
+
+**There is no bare `GET /health`.** It was ambiguous about which of the three it answered, and
+the two plausible readings have opposite remedies. It was removed in 0.13.0.
 
 `DatabaseReadinessCheck` runs `SELECT 1` rather than reading `dataSource.isInitialized` — that
 flag stays `true` after the connection drops.
 
-Both routes are `VERSION_NEUTRAL` and `@Public()`. **A probe URL must not move when the API
+Every route is `VERSION_NEUTRAL` and `@Public()`. **A probe URL must not move when the API
 contract version does** — under URI versioning an unmarked controller lands on `/v1/health`,
 so shipping v2 silently breaks every probe configured against v1. And a load balancer holds no
 credentials, so a global `AuthGuard` that does not honour `@Public()` 401s the probe and takes
 the whole service out of rotation. Version 0.1.0 shipped without either; 0.1.1 adds them.
+
+Exclude the probes from the global prefix with the exported list rather than by hand, so a
+route added here cannot end up served from `/api/health/...` in one service and `/health/...`
+in the next:
+
+```ts
+app.setGlobalPrefix('api', { exclude: [...HEALTH_ROUTE_EXCLUSIONS] });
+```
 
 ## `auth/` — verifying an identity token
 
