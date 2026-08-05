@@ -35,6 +35,10 @@ describe('HealthController', () => {
         it('is public, so a global AuthGuard cannot 401 a load balancer that has no credentials', () => {
             expect(Reflect.getMetadata(IS_PUBLIC_KEY, HealthController)).toBe(true);
         });
+
+        it('is tagged Health for OpenAPI, so services with only probes still have usable docs', () => {
+            expect(Reflect.getMetadata('swagger/apiUseTags', HealthController)).toEqual(['Health']);
+        });
     });
 
     describe('live', () => {

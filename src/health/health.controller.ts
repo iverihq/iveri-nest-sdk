@@ -7,9 +7,12 @@ import {
     ServiceUnavailableException,
     VERSION_NEUTRAL,
 } from '@nestjs/common';
+import { ApiOkResponse, ApiOperation, ApiServiceUnavailableResponse, ApiTags } from '@nestjs/swagger';
 
 import { Public } from '../auth/public.decorator';
 
+import { LivenessResponseDto } from './dto/liveness-response.dto';
+import { ReadinessResponseDto } from './dto/readiness-response.dto';
 import { READINESS_CHECKS, type ReadinessCheck } from './readiness-check.interface';
 
 /** Per-dependency outcome reported by `GET /health/ready`. */
@@ -40,6 +43,7 @@ interface ReadinessResponse {
  * `/v1/health`. A probe URL must not move when the API contract version does, or shipping v2
  * silently fails every health check that was configured against v1.
  */
+@ApiTags('Health')
 @Public()
 @Controller({ path: 'health', version: VERSION_NEUTRAL })
 export class HealthController {
@@ -47,11 +51,26 @@ export class HealthController {
 
     @Get()
     @HttpCode(HttpStatus.OK)
+    @ApiOperation({
+        summary: 'Liveness probe',
+        description: 'Returns 200 when the process is running. Never touches dependencies.',
+    })
+    @ApiOkResponse({ description: 'Process is alive.', type: LivenessResponseDto })
     live(): { status: 'ok' } {
         return { status: 'ok' };
     }
 
     @Get('ready')
+    @ApiOperation({
+        summary: 'Readiness probe',
+        description:
+            'Returns 200 when every registered dependency check is up. A failed check returns 503 so the instance leaves rotation.',
+    })
+    @ApiOkResponse({ description: 'Ready to serve traffic.', type: ReadinessResponseDto })
+    @ApiServiceUnavailableResponse({
+        description: 'One or more dependency checks are down.',
+        type: ReadinessResponseDto,
+    })
     async ready(): Promise<ReadinessResponse> {
         const results = await Promise.all(this.checks.map((check) => this.run(check)));
         const response: ReadinessResponse = {
