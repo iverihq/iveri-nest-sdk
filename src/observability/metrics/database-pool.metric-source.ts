@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, type OnModuleInit } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import type { Gauge } from 'prom-client';
 import { DataSource } from 'typeorm';
@@ -31,20 +31,31 @@ interface PoolCounts {
  * fails, and `MetricsService` is what makes that distinction visible.
  */
 @Injectable()
-export class DatabasePoolMetricSource implements MetricSource {
+export class DatabasePoolMetricSource implements MetricSource, OnModuleInit {
     readonly name = 'database-pool';
 
     private readonly connections: Gauge<'state'>;
 
     constructor(
         @InjectDataSource() private readonly dataSource: DataSource,
-        metricsService: MetricsService,
+        private readonly metricsService: MetricsService,
     ) {
         this.connections = metricsService.gauge({
             name: DATABASE_POOL_GAUGE,
             help: 'Postgres connections held by this process, by state.',
             labelNames: ['state'],
         });
+    }
+
+    /**
+     * Registers itself rather than being listed in `MetricsModule.forRoot`.
+     *
+     * `MetricsModule` is global, so it cannot import the module that provides the `DataSource`
+     * without forming a cycle Nest resolves by hanging. A service provides this class in its own
+     * `AppModule`, where both dependencies are already in scope.
+     */
+    onModuleInit(): void {
+        this.metricsService.registerSource(this);
     }
 
     refresh(): void {

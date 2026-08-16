@@ -10,7 +10,7 @@ import {
     collectDefaultMetrics,
 } from 'prom-client';
 
-import { METRIC_SOURCES, type MetricSource } from './metric-source.interface';
+import type { MetricSource } from './metric-source.interface';
 import type { MetricsModuleOptions } from './metrics-module-options.interface';
 import {
     HTTP_DURATION_BUCKETS_SECONDS,
@@ -21,7 +21,7 @@ import {
     QUEUE_DEPTH_GAUGE,
     STATUS_CODE_LABEL,
 } from './metrics.constant';
-import { QUEUE_DEPTH_COLLECTORS, type QueueDepthCollector } from './queue-depth-collector.interface';
+import type { QueueDepthCollector } from './queue-depth-collector.interface';
 
 /** One request, as recorded by {@link MetricsService.observeHttpRequest}. */
 export interface HttpRequestObservation {
@@ -72,11 +72,11 @@ export class MetricsService implements OnApplicationShutdown {
 
     private readonly queueDepth: Gauge<'queue' | 'state'>;
 
-    constructor(
-        @Inject(METRICS_MODULE_OPTIONS) options: MetricsModuleOptions,
-        @Inject(QUEUE_DEPTH_COLLECTORS) private readonly queueDepthCollectors: QueueDepthCollector[],
-        @Inject(METRIC_SOURCES) private readonly metricSources: MetricSource[],
-    ) {
+    private readonly queueDepthCollectors: QueueDepthCollector[] = [];
+
+    private readonly metricSources: MetricSource[] = [];
+
+    constructor(@Inject(METRICS_MODULE_OPTIONS) options: MetricsModuleOptions) {
         this.registry.setDefaultLabels({ service: options.serviceName, ...options.defaultLabels });
 
         if (options.collectDefaultMetrics ?? true) {
@@ -135,6 +135,29 @@ export class MetricsService implements OnApplicationShutdown {
 
         this.httpRequests.inc(labels);
         this.httpDuration.observe(labels, durationSeconds);
+    }
+
+    /**
+     * Registers a queue whose depth is sampled on every scrape.
+     *
+     * **Called by the feature that owns the queue, not passed to `MetricsModule.forRoot`.** That
+     * is not a style preference — it is the only arrangement that works. `MetricsModule` is
+     * `@Global()`, so Nest adds it to *every* module's context; a global module that also
+     * imported the feature modules would sit on both sides of a cycle, and Nest does not report
+     * that as an error, it simply never finishes resolving. The symptom is `compile()` hanging
+     * until the test times out, with nothing logged.
+     *
+     * Registering from the feature keeps the dependency pointing one way — features know about
+     * metrics, metrics knows nothing about features — which is also the right direction for a
+     * shared package.
+     */
+    registerQueueDepthCollector(collector: QueueDepthCollector): void {
+        this.queueDepthCollectors.push(collector);
+    }
+
+    /** Registers a {@link MetricSource}, sampled on every scrape. Same reasoning as above. */
+    registerSource(source: MetricSource): void {
+        this.metricSources.push(source);
     }
 
     /** Requests currently being served, incremented on entry and decremented when they end. */

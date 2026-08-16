@@ -9,7 +9,19 @@ const build = (
     options: Partial<MetricsModuleOptions> = {},
     collectors: QueueDepthCollector[] = [],
     sources: MetricSource[] = [],
-): MetricsService => new MetricsService({ ...OPTIONS, ...options }, collectors, sources);
+): MetricsService => {
+    const service = new MetricsService({ ...OPTIONS, ...options });
+
+    for (const collector of collectors) {
+        service.registerQueueDepthCollector(collector);
+    }
+
+    for (const source of sources) {
+        service.registerSource(source);
+    }
+
+    return service;
+};
 
 /** A collector that answers as told and counts how often it was asked. */
 const stubCollector = (

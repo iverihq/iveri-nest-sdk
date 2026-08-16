@@ -4,6 +4,15 @@ The NestJS plumbing every Iveri service shares: request context, authentication 
 authorization, typed exceptions, tenant-scoped persistence, config validation, health endpoints,
 Redis, rate limiting, metrics and error reporting.
 
+Release `0.17.0` changes how a queue-depth collector or metric source reaches `MetricsService`:
+a feature **registers** its own with `registerQueueDepthCollector` / `registerSource` instead of
+being listed in `MetricsModule.forRoot`. The old shape could not work — `MetricsModule` is
+`@Global()`, so Nest puts it in every module's context, and a global module that also imported
+the feature modules sits on both sides of a cycle. Nest does not report that as an error: it
+hangs inside `compile()` until the caller times out, logging nothing. Registration also keeps
+the dependency pointing the way a shared package needs it to, with features knowing about
+metrics and metrics knowing nothing about features.
+
 Release `0.16.0` adds the pieces a service needs to measure **its own domain**, not just its
 HTTP surface: `MetricsService.counter/gauge/histogram` factories, an in-flight request gauge,
 a general `MetricSource` for anything that must be sampled at scrape time, and
@@ -457,7 +466,24 @@ stale exactly when the application stops doing the thing that pushes it. A pool 
 the example — the requests that would have updated a pushed gauge are the ones stuck waiting.
 `DatabasePoolMetricSource` reports `total`, `idle`, `in_use` and `waiting`; **`waiting` above
 zero is the number that matters**, because from outside the process pool exhaustion is
-indistinguishable from a slow database.
+indistinguishable from a slow database. Provide it in the service's own `AppModule`, where the
+`DataSource` and `MetricsService` are both already in scope — it registers itself on init.
+
+A feature that owns a durable queue registers its repository, which is where the `COUNT` belongs:
+
+```ts
+@Injectable()
+export class DeliveryQueueMetrics implements OnModuleInit {
+    constructor(
+        private readonly metricsService: MetricsService,
+        private readonly deliveryRepository: DeliveryRepository,
+    ) {}
+
+    onModuleInit(): void {
+        this.metricsService.registerQueueDepthCollector(this.deliveryRepository);
+    }
+}
+```
 
 ### Error reporting
 

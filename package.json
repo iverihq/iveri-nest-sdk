@@ -1,6 +1,6 @@
 {
   "name": "@iveri/nest-sdk",
-  "version": "0.16.0",
+  "version": "0.17.0",
   "description": "Shared NestJS plumbing for Iveri services \u2014 request context, auth guards, envelope encryption, typed exceptions, tenant-scoped persistence, config validation, health, Redis, rate limiting, metrics and error reporting",
   "license": "MIT",
   "repository": {
