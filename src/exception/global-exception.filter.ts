@@ -3,6 +3,11 @@ import { type ArgumentsHost, Catch, type ExceptionFilter, HttpException, HttpSta
 import type { Request, Response } from 'express';
 
 import { HeaderKey } from '../constant/header-key.constant';
+import { isInfrastructureRoute } from '../constant/infrastructure-route.constant';
+import { REQUEST_CONTEXT_PROPERTY } from '../context/current-request-context.decorator';
+import type { RequestContext } from '../context/request-context.interface';
+import type { ErrorReporter } from '../observability/error/error-reporter.interface';
+import { readRoutePattern } from '../observability/route-pattern.util';
 
 import { DomainException } from './domain.exception';
 
@@ -61,6 +66,14 @@ export interface GlobalExceptionFilterOptions {
      * upstream URLs. Drive it from `NODE_ENV`, never hardcode `true`.
      */
     exposeInternalErrors?: boolean;
+
+    /**
+     * Where 5xx failures are reported — `ErrorReporterService` in a service that has one.
+     *
+     * Optional, and absent is a supported state: a service with no error tracker configured
+     * behaves exactly as it did before, logging and nothing else.
+     */
+    reporter?: ErrorReporter;
 }
 
 /** The normalized form every branch below produces before it is rendered. */
@@ -88,9 +101,11 @@ interface NormalizedError {
 export class GlobalExceptionFilter implements ExceptionFilter {
     private readonly logger = new Logger(GlobalExceptionFilter.name);
     private readonly exposeInternalErrors: boolean;
+    private readonly reporter: Maybe<ErrorReporter>;
 
     constructor(options: GlobalExceptionFilterOptions = {}) {
         this.exposeInternalErrors = options.exposeInternalErrors ?? false;
+        this.reporter = options.reporter;
     }
 
     catch(exception: unknown, host: ArgumentsHost): void {
@@ -102,6 +117,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         const correlationId = this.readCorrelationId(request);
 
         this.log(exception, normalized, request, correlationId);
+        this.report(exception, normalized, request, correlationId);
 
         const body: ApiErrorResponse = {
             success: false,
@@ -222,6 +238,49 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         const value: unknown = (source as Record<string, unknown>)[property];
 
         return typeof value === 'string' ? value : undefined;
+    }
+
+    /**
+     * Sends the failures worth a human's attention to the error tracker.
+     *
+     * **5xx only.** A 4xx is the caller getting it wrong and the system saying so correctly —
+     * capturing all sixteen typed domain exceptions would bury the one real bug under a week of
+     * validation failures on the first day, which is how a team learns to ignore the tracker.
+     *
+     * Infrastructure routes are excluded for a related reason: a readiness probe answers 503
+     * for as long as a dependency is down, so reporting each one turns a single outage into
+     * thousands of events that say nothing the first already said.
+     */
+    private report(exception: unknown, normalized: NormalizedError, request: Request, correlationId: string): void {
+        if (
+            !this.reporter?.isEnabled() ||
+            normalized.status < HttpStatus.INTERNAL_SERVER_ERROR ||
+            isInfrastructureRoute(request.path)
+        ) {
+            return;
+        }
+
+        this.reporter.capture(exception, {
+            correlationId,
+            tenantId: this.readTenantId(request),
+            method: request.method,
+            // The pattern, never the URL — `conduit-api`'s ingress path carries the endpoint's
+            // credential, and this value leaves the machine.
+            route: readRoutePattern(request),
+            extra: { code: normalized.code, status: normalized.status },
+        });
+    }
+
+    /**
+     * Tenant the request was acting in, when the auth layer resolved one.
+     *
+     * Read defensively: this runs on the failure path, which includes requests that threw
+     * before the guard that populates the context ever ran.
+     */
+    private readTenantId(request: Request): Maybe<string> {
+        const requestContext: unknown = Reflect.get(request, REQUEST_CONTEXT_PROPERTY);
+
+        return this.readStringProperty(requestContext, 'tenantId' satisfies keyof RequestContext);
     }
 
     private readCorrelationId(request: Request): string {

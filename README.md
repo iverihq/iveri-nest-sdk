@@ -2,7 +2,13 @@
 
 The NestJS plumbing every Iveri service shares: request context, authentication and
 authorization, typed exceptions, tenant-scoped persistence, config validation, health endpoints,
-Redis and rate limiting.
+Redis, rate limiting, metrics and error reporting.
+
+Release `0.15.0` fills in `observability/` — a Prometheus scrape endpoint with HTTP and
+queue-depth metrics, and a Sentry seam wired into `GlobalExceptionFilter`. It adds two **peer
+dependencies**, `prom-client` and `@sentry/node`, which every consumer must install directly.
+The scrape route is excluded from a service's global prefix with `METRICS_ROUTE_EXCLUSIONS`,
+spread alongside `HEALTH_ROUTE_EXCLUSIONS`.
 
 Release `0.14.0` moves `@iveri/contracts` from a **dependency to a peer dependency**. It was
 installing a second, older copy of the package underneath the SDK, so anything the SDK typed
@@ -378,9 +384,75 @@ system is already reading. Run anything that is itself a credential through
 
 ---
 
+## `observability/` — metrics and error reporting
+
+`MetricsModule.forRoot(...)` registers `GET /metrics` and counts every request. It is
+`@Global()` and applies its own middleware, so a service imports it once and nothing else has
+to be wired:
+
+```ts
+MetricsModule.forRoot({
+    serviceName: 'conduit-api',
+    queueDepthCollectors: [DeliveryRepository, DispatchRepository],
+    imports: [DeliveryModule, DispatchModule],
+});
+```
+
+```ts
+app.setGlobalPrefix('api', { exclude: [...HEALTH_ROUTE_EXCLUSIONS, ...METRICS_ROUTE_EXCLUSIONS] });
+```
+
+Three rules hold the design together, and all three are about **cardinality**, which is the way
+a metrics system is normally ruined:
+
+- **The `route` label is the route pattern, never the URL.** `conduit-api` serves
+  `/ingress/:ingressToken/*path`, so labelling by URL would mint a permanent time series per
+  ingress token — an unbounded set chosen by people outside the company. It is also the reason
+  this is **middleware and not an interceptor**: an interceptor never sees a 404, so a scanner
+  would leave no trace in the request rate at all. Unmatched requests are bucketed under
+  `unmatched`.
+- **No tenant label, ever.** Tenants are unbounded and grow with the business, and the scrape
+  endpoint is unauthenticated — keeping tenant identifiers out of it by construction is what
+  makes that acceptable. Per-tenant questions belong to `iveri-billing-api`'s usage metering and
+  to the structured logs, both of which are built for them.
+- **Queue depth is read at scrape time, not written by the processor.** A gauge the processor
+  updates goes stale exactly when the processor stops, which is the moment the number matters.
+  A collector that throws leaves _no_ series for its queue rather than its last value: a gap is
+  honest about not knowing, and a stale number is a claim that the backlog is fine made by the
+  one component that just proved it cannot see the backlog.
+
+`ErrorReporterModule.forRootAsync(...)` provides `ErrorReporterService`. **A missing DSN is a
+supported state** — locally there is no tracker and errors go to structured logs — so every
+capture becomes a no-op and nothing else changes. Pass the resolved service to the filter, which
+is where the decision about _what_ is worth reporting lives:
+
+```ts
+new GlobalExceptionFilter({ exposeInternalErrors, reporter: errorReporterService });
+```
+
+Only **5xx** and genuinely unhandled failures are captured. A 4xx is the caller getting it wrong
+and the system saying so correctly, and capturing all sixteen typed domain exceptions buries the
+one real bug under a week of validation failures. Health and metrics routes are excluded too — a
+readiness probe answers 503 for as long as a dependency is down.
+
+Everything leaving the process goes through `scrubEvent`, which is the entire safety case for
+sending errors off the machine. The request is reduced to its **method** and an **allowlist** of
+headers; the body, the URL, the query string and the cookies are dropped. That is not
+over-caution: `conduit-api` is holding a customer's Meta or Stripe payload when it throws, its
+ingress URL contains the credential authorising posts to that endpoint, and
+`iveri-identity-api` handles passwords and refresh tokens on exactly the routes most likely to
+fail. Values under keys naming a secret are redacted recursively, to a bounded depth.
+
+Tenant ids **are** tagged on an error report while being forbidden as a metric label. That looks
+inconsistent and is not: a Prometheus label is a stored time series and an unauthenticated
+exposure, a Sentry tag is neither, and "which customer hit this" is the first question anyone
+asks about an error.
+
+---
+
 ## What is deliberately not here yet
 
-`outbox/`, `inbox/`, `lock/`, `http/`, `pagination/`, `swagger/` and `observability/` are in
+`outbox/`, `inbox/`, `lock/`, `http/`, `pagination/` and `swagger/` are in
 the plan and unwritten. Per the second-consumer rule, they get written in the service that
 first needs them and are pushed down here once proven by real use. Nothing is extracted in
 anticipation.
