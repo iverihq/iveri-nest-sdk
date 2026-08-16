@@ -33,6 +33,15 @@ export const METRICS_MODULE_OPTIONS = Symbol('METRICS_MODULE_OPTIONS');
  */
 export const HTTP_REQUESTS_TOTAL = 'http_server_requests_total';
 
+/**
+ * Requests in flight right now.
+ *
+ * A gauge rather than something derivable from the counter above: concurrency is what saturates
+ * a connection pool, and a rate over a five-minute window cannot show a pile-up that lasted
+ * thirty seconds.
+ */
+export const HTTP_REQUESTS_IN_FLIGHT = 'http_server_requests_in_flight';
+
 /** Request duration in **seconds** — the Prometheus base unit; never milliseconds. */
 export const HTTP_REQUEST_DURATION_SECONDS = 'http_server_request_duration_seconds';
 
@@ -53,6 +62,9 @@ export const STATUS_CODE_LABEL = 'status_code';
  * browser next to the many `nodejs_*` and `process_*` series the default collector emits.
  */
 export const QUEUE_DEPTH_GAUGE = 'iveri_queue_depth';
+
+/** Postgres connections held by a process, by state. */
+export const DATABASE_POOL_GAUGE = 'iveri_database_pool_connections';
 
 /**
  * Latency histogram buckets, in seconds.

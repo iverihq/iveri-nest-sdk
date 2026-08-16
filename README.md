@@ -4,6 +4,11 @@ The NestJS plumbing every Iveri service shares: request context, authentication 
 authorization, typed exceptions, tenant-scoped persistence, config validation, health endpoints,
 Redis, rate limiting, metrics and error reporting.
 
+Release `0.16.0` adds the pieces a service needs to measure **its own domain**, not just its
+HTTP surface: `MetricsService.counter/gauge/histogram` factories, an in-flight request gauge,
+a general `MetricSource` for anything that must be sampled at scrape time, and
+`DatabasePoolMetricSource` on top of it for connection-pool saturation.
+
 Release `0.15.0` fills in `observability/` — a Prometheus scrape endpoint with HTTP and
 queue-depth metrics, and a Sentry seam wired into `GlobalExceptionFilter`. It adds two **peer
 dependencies**, `prom-client` and `@sentry/node`, which every consumer must install directly.
@@ -420,6 +425,41 @@ a metrics system is normally ruined:
   A collector that throws leaves _no_ series for its queue rather than its last value: a gap is
   honest about not knowing, and a stale number is a claim that the backlog is fine made by the
   one component that just proved it cannot see the backlog.
+
+### Domain metrics
+
+A feature registers its own metrics through `MetricsService` rather than importing
+`prom-client`, so ten services do not each register into a registry slightly differently:
+
+```ts
+@Injectable()
+export class DeliveryMetrics {
+    private readonly attempts: Counter<'outcome'>;
+
+    constructor(metricsService: MetricsService) {
+        this.attempts = metricsService.counter({
+            name: 'conduit_delivery_attempts_total',
+            help: 'Delivery attempts, by outcome.',
+            labelNames: ['outcome'],
+        });
+    }
+}
+```
+
+A metric name and its label set are a **contract** — alert rules and dashboards are written
+against them, so renaming one empties a graph rather than breaking a build. Registering the same
+name twice throws, deliberately: it means two features believe they own one metric, and the
+values would interleave while both kept looking plausible.
+
+`MetricSource` covers anything that must be **sampled when the scrape arrives** rather than
+written as it happens, for the same reason queue depth is: a value the application pushes goes
+stale exactly when the application stops doing the thing that pushes it. A pool at its limit is
+the example — the requests that would have updated a pushed gauge are the ones stuck waiting.
+`DatabasePoolMetricSource` reports `total`, `idle`, `in_use` and `waiting`; **`waiting` above
+zero is the number that matters**, because from outside the process pool exhaustion is
+indistinguishable from a slow database.
+
+### Error reporting
 
 `ErrorReporterModule.forRootAsync(...)` provides `ErrorReporterService`. **A missing DSN is a
 supported state** — locally there is no tracker and errors go to structured logs — so every

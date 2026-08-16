@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 
 import { HttpMetricsMiddleware } from './http-metrics.middleware';
+import { METRIC_SOURCES, type MetricSource } from './metric-source.interface';
 import type { MetricsModuleOptions } from './metrics-module-options.interface';
 import { METRICS_MODULE_OPTIONS } from './metrics.constant';
 import { MetricsController } from './metrics.controller';
@@ -43,6 +44,7 @@ import { QUEUE_DEPTH_COLLECTORS, type QueueDepthCollector } from './queue-depth-
 export class MetricsModule implements NestModule {
     static forRoot(options: MetricsModuleOptions): DynamicModule {
         const collectors = options.queueDepthCollectors ?? [];
+        const sources = options.metricSources ?? [];
 
         return {
             module: MetricsModule,
@@ -50,9 +52,12 @@ export class MetricsModule implements NestModule {
             controllers: [MetricsController],
             providers: [
                 { provide: METRICS_MODULE_OPTIONS, useValue: options },
-                ...collectors,
-                MetricsModule.collect(collectors),
                 MetricsService,
+                // Registered after MetricsService because a source builds its gauges through the
+                // factories on it, so it cannot be constructed first.
+                ...new Set([...collectors, ...sources]),
+                MetricsModule.gather<QueueDepthCollector>(QUEUE_DEPTH_COLLECTORS, collectors),
+                MetricsModule.gather<MetricSource>(METRIC_SOURCES, sources),
                 HttpMetricsMiddleware,
             ],
             exports: [MetricsService],
@@ -60,17 +65,17 @@ export class MetricsModule implements NestModule {
     }
 
     /**
-     * Collects resolved collector instances into the array {@link MetricsService} injects.
+     * Collects resolved instances into the array {@link MetricsService} injects.
      *
      * Nest has no native multi-provider, so they are injected positionally and gathered by a
      * factory — the same arrangement `HealthModule` uses for its checks, and worth keeping
      * identical so that reading one explains the other.
      */
-    private static collect(collectors: Type<QueueDepthCollector>[]): Provider {
+    private static gather<T>(token: symbol, providers: Type<T>[]): Provider {
         return {
-            provide: QUEUE_DEPTH_COLLECTORS,
-            useFactory: (...resolved: QueueDepthCollector[]): QueueDepthCollector[] => resolved,
-            inject: collectors,
+            provide: token,
+            useFactory: (...resolved: T[]): T[] => resolved,
+            inject: providers,
         };
     }
 

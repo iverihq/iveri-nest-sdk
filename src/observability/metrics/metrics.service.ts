@@ -1,9 +1,20 @@
 import { Inject, Injectable, Logger, type OnApplicationShutdown } from '@nestjs/common';
-import { Counter, Gauge, Histogram, Registry, collectDefaultMetrics } from 'prom-client';
+import {
+    Counter,
+    type CounterConfiguration,
+    Gauge,
+    type GaugeConfiguration,
+    Histogram,
+    type HistogramConfiguration,
+    Registry,
+    collectDefaultMetrics,
+} from 'prom-client';
 
+import { METRIC_SOURCES, type MetricSource } from './metric-source.interface';
 import type { MetricsModuleOptions } from './metrics-module-options.interface';
 import {
     HTTP_DURATION_BUCKETS_SECONDS,
+    HTTP_REQUESTS_IN_FLIGHT,
     HTTP_REQUESTS_TOTAL,
     HTTP_REQUEST_DURATION_SECONDS,
     METRICS_MODULE_OPTIONS,
@@ -57,11 +68,14 @@ export class MetricsService implements OnApplicationShutdown {
 
     private readonly httpDuration: Histogram<(typeof HTTP_LABEL_NAMES)[number]>;
 
+    private readonly httpInFlight: Gauge<string>;
+
     private readonly queueDepth: Gauge<'queue' | 'state'>;
 
     constructor(
         @Inject(METRICS_MODULE_OPTIONS) options: MetricsModuleOptions,
         @Inject(QUEUE_DEPTH_COLLECTORS) private readonly queueDepthCollectors: QueueDepthCollector[],
+        @Inject(METRIC_SOURCES) private readonly metricSources: MetricSource[],
     ) {
         this.registry.setDefaultLabels({ service: options.serviceName, ...options.defaultLabels });
 
@@ -81,6 +95,12 @@ export class MetricsService implements OnApplicationShutdown {
             help: 'HTTP request duration in seconds, by method, route pattern and status code.',
             labelNames: HTTP_LABEL_NAMES,
             buckets: [...HTTP_DURATION_BUCKETS_SECONDS],
+            registers: [this.registry],
+        });
+
+        this.httpInFlight = new Gauge({
+            name: HTTP_REQUESTS_IN_FLIGHT,
+            help: 'Requests currently being served.',
             registers: [this.registry],
         });
 
@@ -105,7 +125,7 @@ export class MetricsService implements OnApplicationShutdown {
      * there is no way to render a stale gauge by reaching for the registry directly.
      */
     async render(): Promise<string> {
-        await this.refreshQueueDepth();
+        await Promise.all([this.refreshQueueDepth(), this.refreshSources()]);
 
         return this.registry.metrics();
     }
@@ -117,7 +137,51 @@ export class MetricsService implements OnApplicationShutdown {
         this.httpDuration.observe(labels, durationSeconds);
     }
 
-    /** The underlying registry, for a service that needs to register a metric of its own. */
+    /** Requests currently being served, incremented on entry and decremented when they end. */
+    trackRequestStarted(): void {
+        this.httpInFlight.inc();
+    }
+
+    trackRequestFinished(): void {
+        this.httpInFlight.dec();
+    }
+
+    /**
+     * Registers a domain counter — something that only ever goes up, like messages sent or
+     * signatures rejected.
+     *
+     * These factories exist so a feature can own a metric without importing `prom-client` and
+     * without reaching for {@link getRegistry}, which is the version of this that ends with ten
+     * services each registering into a registry slightly differently.
+     *
+     * **The name and label set are a contract.** Alert rules and dashboards are written against
+     * them, so renaming one silently empties a graph rather than breaking a build. The same
+     * cardinality rule as everywhere else applies to the labels: nothing tenant-scoped, nothing
+     * carrying an id, nothing a caller can vary freely.
+     *
+     * Registering the same name twice throws, deliberately — it means two features believe they
+     * own one metric, and the values would interleave.
+     */
+    counter<TLabel extends string>(configuration: CounterConfiguration<TLabel>): Counter<TLabel> {
+        return new Counter({ ...configuration, registers: [this.registry] });
+    }
+
+    /** Registers a domain gauge — something that goes up and down, like open connections. */
+    gauge<TLabel extends string>(configuration: GaugeConfiguration<TLabel>): Gauge<TLabel> {
+        return new Gauge({ ...configuration, registers: [this.registry] });
+    }
+
+    /**
+     * Registers a domain histogram — a distribution, like provider response time.
+     *
+     * Every bucket is a stored series per label combination, so keep the bucket list short and
+     * chosen for the thing being measured rather than copied from the HTTP one.
+     */
+    histogram<TLabel extends string>(configuration: HistogramConfiguration<TLabel>): Histogram<TLabel> {
+        return new Histogram({ ...configuration, registers: [this.registry] });
+    }
+
+    /** The underlying registry, for the rare case the factories above do not cover. */
     getRegistry(): Registry {
         return this.registry;
     }
@@ -138,6 +202,23 @@ export class MetricsService implements OnApplicationShutdown {
         this.queueDepth.reset();
 
         await Promise.all(this.queueDepthCollectors.map((collector) => this.refreshOne(collector)));
+    }
+
+    /** Samples every {@link MetricSource}, with the same isolation queue depth gets. */
+    private async refreshSources(): Promise<void> {
+        await Promise.all(
+            this.metricSources.map(async (source) => {
+                try {
+                    await source.refresh();
+                } catch (error: unknown) {
+                    this.logger.warn({
+                        message: 'Metric source refresh failed — its series are absent from this scrape',
+                        source: source.name,
+                        error: error instanceof Error ? error.message : 'unknown failure',
+                    });
+                }
+            }),
+        );
     }
 
     private async refreshOne(collector: QueueDepthCollector): Promise<void> {

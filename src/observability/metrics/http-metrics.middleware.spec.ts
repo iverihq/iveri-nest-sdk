@@ -23,18 +23,22 @@ const stubRequest = (overrides: Partial<Request> = {}): Request =>
 
 const build = (
     ignoredRoutes?: readonly string[],
-): { middleware: HttpMetricsMiddleware; observed: HttpRequestObservation[] } => {
+): { middleware: HttpMetricsMiddleware; observed: HttpRequestObservation[]; inFlight: () => number } => {
     const observed: HttpRequestObservation[] = [];
+    let inFlight = 0;
 
     const metricsService = {
         observeHttpRequest: (observation: HttpRequestObservation): void => {
             observed.push(observation);
         },
+        trackRequestStarted: (): void => void (inFlight += 1),
+        trackRequestFinished: (): void => void (inFlight -= 1),
     } as unknown as MetricsService;
 
     return {
         middleware: new HttpMetricsMiddleware({ serviceName: 'conduit-api', ignoredRoutes }, metricsService),
         observed,
+        inFlight: () => inFlight,
     };
 };
 
@@ -104,6 +108,40 @@ describe('HttpMetricsMiddleware', () => {
 
             expect(observed).toHaveLength(1);
             expect(observed[0].statusCode).toBe(499);
+        });
+    });
+
+    describe('in-flight tracking', () => {
+        it('returns to zero once the response ends', () => {
+            const { middleware, inFlight } = build();
+            const response = stubResponse();
+
+            middleware.use(stubRequest(), response, next);
+            expect(inFlight()).toBe(1);
+
+            response.emit('finish');
+            expect(inFlight()).toBe(0);
+        });
+
+        it('decrements once when both finish and close fire', () => {
+            // A double decrement would drive the gauge negative and never recover, which reads
+            // as an idle service under load.
+            const { middleware, inFlight } = build();
+            const response = stubResponse();
+
+            middleware.use(stubRequest(), response, next);
+            response.emit('finish');
+            response.emit('close');
+
+            expect(inFlight()).toBe(0);
+        });
+
+        it('does not count an ignored route', () => {
+            const { middleware, inFlight } = build();
+
+            middleware.use(stubRequest({ path: '/metrics' }), stubResponse(), next);
+
+            expect(inFlight()).toBe(0);
         });
     });
 
