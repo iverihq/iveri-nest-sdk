@@ -90,6 +90,6 @@ export class HttpMetricsMiddleware implements NestMiddleware {
     private static readPath(request: Request): string {
         const [path] = (request.originalUrl || request.url).split('?');
 
-        return path ?? '/';
+        return path;
     }
 }
