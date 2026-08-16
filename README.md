@@ -4,6 +4,13 @@ The NestJS plumbing every Iveri service shares: request context, authentication 
 authorization, typed exceptions, tenant-scoped persistence, config validation, health endpoints,
 Redis, rate limiting, metrics and error reporting.
 
+Release `0.17.1` fixes the HTTP middleware reading `request.path`. Nest mounts middleware per
+matched route, so Express reports `path` as `/` and puts the real path in `baseUrl` — the
+ignored-route check therefore matched nothing and the scrape endpoint counted its own scrapes.
+It now reads `originalUrl`. The same investigation disproved a claim this README made: Nest
+404s an unregistered path **before** middleware runs, so unmatched requests are not counted
+unless a service has a catch-all route.
+
 Release `0.17.0` changes how a queue-depth collector or metric source reaches `MetricsService`:
 a feature **registers** its own with `registerQueueDepthCollector` / `registerSource` instead of
 being listed in `MetricsModule.forRoot`. The old shape could not work — `MetricsModule` is
