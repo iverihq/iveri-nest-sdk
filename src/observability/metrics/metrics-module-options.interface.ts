@@ -1,8 +1,3 @@
-import type { ModuleMetadata, Type } from '@nestjs/common';
-
-import type { MetricSource } from './metric-source.interface';
-import type { QueueDepthCollector } from './queue-depth-collector.interface';
-
 /** How a service configures metrics collection. */
 export interface MetricsModuleOptions {
     /**
@@ -36,24 +31,6 @@ export interface MetricsModuleOptions {
     collectDefaultMetrics?: boolean;
 
     /**
-     * Repositories to resolve as {@link QueueDepthCollector}s, feeding the queue-depth gauge.
-     *
-     * A service with no durable work queue passes nothing and the gauge is simply never
-     * populated.
-     */
-    queueDepthCollectors?: Type<QueueDepthCollector>[];
-
-    /**
-     * Providers to resolve as {@link MetricSource}s — anything that must be sampled when the
-     * scrape arrives rather than written as it happens.
-     *
-     * `DatabasePoolMetricSource` is the one the SDK ships; a service adds it explicitly rather
-     * than getting it by default, because a service with no TypeORM `DataSource` would fail to
-     * resolve it.
-     */
-    metricSources?: Type<MetricSource>[];
-
-    /**
      * Request paths excluded from the HTTP metrics, matched by prefix. Defaults to the probe
      * and scrape routes.
      *
@@ -61,7 +38,4 @@ export interface MetricsModuleOptions {
      * `DEFAULT_IGNORED_METRICS_ROUTES` into whatever you add.
      */
     ignoredRoutes?: readonly string[];
-
-    /** Modules exporting anything the queue-depth collectors inject. */
-    imports?: ModuleMetadata['imports'];
 }

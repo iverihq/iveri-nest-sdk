@@ -1,30 +1,16 @@
-import {
-    type DynamicModule,
-    Global,
-    type MiddlewareConsumer,
-    Module,
-    type NestModule,
-    type Provider,
-    type Type,
-} from '@nestjs/common';
+import { type DynamicModule, Global, type MiddlewareConsumer, Module, type NestModule } from '@nestjs/common';
 
 import { HttpMetricsMiddleware } from './http-metrics.middleware';
-import { METRIC_SOURCES, type MetricSource } from './metric-source.interface';
 import type { MetricsModuleOptions } from './metrics-module-options.interface';
 import { METRICS_MODULE_OPTIONS } from './metrics.constant';
 import { MetricsController } from './metrics.controller';
 import { MetricsService } from './metrics.service';
-import { QUEUE_DEPTH_COLLECTORS, type QueueDepthCollector } from './queue-depth-collector.interface';
 
 /**
  * Registers `GET /metrics` and starts counting HTTP traffic.
  *
  * ```ts
- * MetricsModule.forRoot({
- *     serviceName: 'conduit-api',
- *     queueDepthCollectors: [DeliveryRepository, DispatchRepository],
- *     imports: [DeliveryModule, DispatchModule],
- * });
+ * MetricsModule.forRoot({ serviceName: 'conduit-api' });
  * ```
  *
  * **The middleware is applied here, not by the consuming service.** Every service wants it on
@@ -35,6 +21,12 @@ import { QUEUE_DEPTH_COLLECTORS, type QueueDepthCollector } from './queue-depth-
  * `@Global()` so `MetricsService` is injectable wherever a feature wants a metric of its own,
  * without every module importing this one.
  *
+ * **This module deliberately takes no `imports` and no list of collectors.** Being global means
+ * Nest adds it to every module's context, so importing a feature module here would put it on
+ * both sides of a cycle — and Nest does not report that, it hangs forever inside `compile()`.
+ * A feature that owns a queue calls `MetricsService.registerQueueDepthCollector` instead, which
+ * also keeps the dependency pointing the way a shared package needs it to.
+ *
  * `forRoot` rather than `forRootAsync`, unlike `RedisModule`: nothing here comes from the
  * environment. The service name is a constant, and whether metrics are *scraped* is a property
  * of the deployment, not something the process needs to be told.
@@ -43,39 +35,11 @@ import { QUEUE_DEPTH_COLLECTORS, type QueueDepthCollector } from './queue-depth-
 @Module({})
 export class MetricsModule implements NestModule {
     static forRoot(options: MetricsModuleOptions): DynamicModule {
-        const collectors = options.queueDepthCollectors ?? [];
-        const sources = options.metricSources ?? [];
-
         return {
             module: MetricsModule,
-            imports: options.imports ?? [],
             controllers: [MetricsController],
-            providers: [
-                { provide: METRICS_MODULE_OPTIONS, useValue: options },
-                MetricsService,
-                // Registered after MetricsService because a source builds its gauges through the
-                // factories on it, so it cannot be constructed first.
-                ...new Set([...collectors, ...sources]),
-                MetricsModule.gather<QueueDepthCollector>(QUEUE_DEPTH_COLLECTORS, collectors),
-                MetricsModule.gather<MetricSource>(METRIC_SOURCES, sources),
-                HttpMetricsMiddleware,
-            ],
+            providers: [{ provide: METRICS_MODULE_OPTIONS, useValue: options }, MetricsService, HttpMetricsMiddleware],
             exports: [MetricsService],
-        };
-    }
-
-    /**
-     * Collects resolved instances into the array {@link MetricsService} injects.
-     *
-     * Nest has no native multi-provider, so they are injected positionally and gathered by a
-     * factory — the same arrangement `HealthModule` uses for its checks, and worth keeping
-     * identical so that reading one explains the other.
-     */
-    private static gather<T>(token: symbol, providers: Type<T>[]): Provider {
-        return {
-            provide: token,
-            useFactory: (...resolved: T[]): T[] => resolved,
-            inject: providers,
         };
     }
 
