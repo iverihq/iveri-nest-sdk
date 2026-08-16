@@ -18,8 +18,13 @@ const stubResponse = (statusCode = 200): Response & { emit: (event: string) => v
     } as unknown as Response & { emit: (event: string) => void };
 };
 
-const stubRequest = (overrides: Partial<Request> = {}): Request =>
-    ({ method: 'GET', path: '/api/v1/captures', baseUrl: '', ...overrides }) as unknown as Request;
+const stubRequest = (overrides: Partial<Request> & { originalUrl?: string } = {}): Request => {
+    const path = overrides.originalUrl ?? '/api/v1/captures';
+
+    // `path` is deliberately left as `/` — that is what Nest's per-route mounting produces, and
+    // a stub that set it honestly would hide the bug this file now pins.
+    return { method: 'GET', path: '/', baseUrl: '', originalUrl: path, ...overrides } as unknown as Request;
+};
 
 const build = (
     ignoredRoutes?: readonly string[],
@@ -50,9 +55,9 @@ describe('HttpMetricsMiddleware', () => {
             const { middleware, observed } = build();
             const request = stubRequest({
                 method: 'POST',
-                path: '/api/v1/dispatches',
+                originalUrl: '/api/v1/dispatches',
                 route: { path: '/api/v1/dispatches' },
-            } as Partial<Request>);
+            });
             const response = stubResponse(202);
 
             middleware.use(request, response, next);
@@ -61,16 +66,30 @@ describe('HttpMetricsMiddleware', () => {
             expect(observed[0]).toMatchObject({ method: 'POST', route: '/api/v1/dispatches', statusCode: 202 });
         });
 
-        it('records a 404, which an interceptor would never see', () => {
+        it('buckets a request with no matched route rather than labelling it', () => {
             const { middleware, observed } = build();
             const response = stubResponse(404);
 
-            middleware.use(stubRequest({ path: '/wp-admin/setup-config.php' }), response, next);
+            // Nest 404s a genuinely unregistered path before middleware runs, so this arises
+            // from a catch-all route or a non-Express adapter rather than from a scanner. The
+            // bucket still matters: the label must never become an attacker-chosen path.
+            middleware.use(stubRequest({ originalUrl: '/wp-admin/setup-config.php' }), response, next);
             response.emit('finish');
 
-            // This is the reason the whole thing is middleware: a flood of unmatched requests
-            // must be visible in the request rate, bucketed under one label.
             expect(observed[0]).toMatchObject({ route: 'unmatched', statusCode: 404 });
+        });
+
+        it('reads the path from originalUrl, since Nest leaves request.path as /', () => {
+            const { middleware, observed } = build();
+            const response = stubResponse();
+
+            // Nest mounts middleware per matched route, so Express reports `path` as `/` and
+            // puts the real path in `baseUrl`. Reading `path` defeated the ignore list entirely
+            // and the scrape endpoint counted its own scrapes.
+            middleware.use(stubRequest({ originalUrl: '/metrics?debug=1' }), response, next);
+            response.emit('finish');
+
+            expect(observed).toHaveLength(0);
         });
 
         it('measures a duration in seconds', () => {
@@ -139,7 +158,7 @@ describe('HttpMetricsMiddleware', () => {
         it('does not count an ignored route', () => {
             const { middleware, inFlight } = build();
 
-            middleware.use(stubRequest({ path: '/metrics' }), stubResponse(), next);
+            middleware.use(stubRequest({ originalUrl: '/metrics' }), stubResponse(), next);
 
             expect(inFlight()).toBe(0);
         });
@@ -151,7 +170,7 @@ describe('HttpMetricsMiddleware', () => {
 
             for (const path of ['/metrics', '/health/live', '/health/ready']) {
                 const response = stubResponse();
-                middleware.use(stubRequest({ path }), response, next);
+                middleware.use(stubRequest({ originalUrl: path }), response, next);
                 response.emit('finish');
             }
 
@@ -164,7 +183,7 @@ describe('HttpMetricsMiddleware', () => {
             const { middleware, observed } = build();
             const response = stubResponse();
 
-            middleware.use(stubRequest({ path: '/metricsphere' }), response, next);
+            middleware.use(stubRequest({ originalUrl: '/metricsphere' }), response, next);
             response.emit('finish');
 
             expect(observed).toHaveLength(1);
@@ -174,7 +193,7 @@ describe('HttpMetricsMiddleware', () => {
             const { middleware, observed } = build(['/internal']);
             const response = stubResponse();
 
-            middleware.use(stubRequest({ path: '/internal/debug' }), response, next);
+            middleware.use(stubRequest({ originalUrl: '/internal/debug' }), response, next);
             response.emit('finish');
 
             expect(observed).toHaveLength(0);
@@ -184,7 +203,7 @@ describe('HttpMetricsMiddleware', () => {
             const { middleware } = build();
             let called = false;
 
-            middleware.use(stubRequest({ path: '/metrics' }), stubResponse(), () => {
+            middleware.use(stubRequest({ originalUrl: '/metrics' }), stubResponse(), () => {
                 called = true;
             });
 

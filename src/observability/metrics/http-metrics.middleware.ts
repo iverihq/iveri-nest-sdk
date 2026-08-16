@@ -11,17 +11,25 @@ import { MetricsService } from './metrics.service';
 const NANOSECONDS_PER_SECOND = 1e9;
 
 /**
- * Counts and times every request.
+ * Counts and times every request Nest routes.
  *
- * **Middleware rather than an interceptor, and the difference is not stylistic.** An
- * interceptor only runs for requests that matched a route, so a flood of 404s — a scanner, a
- * provider posting to an ingress URL that was rotated, a frontend built against a path that no
- * longer exists — would leave no trace at all in the request rate. Middleware sees everything,
- * and the recording happens on the response's own `finish` event, by which point Express has
- * populated the matched route and the final status code.
+ * Recording happens on the response's own `finish` event, by which point Express has populated
+ * the matched route and the final status code. The `route` label is the route **pattern** — see
+ * `readRoutePattern` for why that distinction is what keeps the metric affordable.
  *
- * The `route` label is the route **pattern** — see `readRoutePattern` for why that distinction
- * is what keeps the metric affordable.
+ * **What it does not see: a request that matched no route at all.** Nest's middleware runs
+ * inside its own routing layer, so a path nothing is registered for is 404'd without ever
+ * reaching here — verified against Nest 11 on Express 5, with both `forRoutes('*')` and an
+ * explicit wildcard. An earlier version of this comment claimed the opposite and used it to
+ * justify middleware over an interceptor; the justification was wrong, though the choice still
+ * stands, because middleware is the only place that sees a request whose handler threw before
+ * an interceptor's response path ran. A service with a catch-all route (Conduit has one under
+ * `/api`) does count its own 404s, under that route's pattern.
+ *
+ * **The path is read from `originalUrl`, never from `request.path`.** Nest mounts middleware
+ * per matched route, so Express sets `baseUrl` to the mount path and leaves `request.path` as
+ * `/` — which silently defeated the ignored-route check, and the symptom was the scrape
+ * endpoint counting its own scrapes.
  */
 @Injectable()
 export class HttpMetricsMiddleware implements NestMiddleware {
@@ -35,7 +43,7 @@ export class HttpMetricsMiddleware implements NestMiddleware {
     }
 
     use(request: Request, response: Response, next: NextFunction): void {
-        if (isInfrastructureRoute(request.path, this.ignoredRoutes)) {
+        if (isInfrastructureRoute(HttpMetricsMiddleware.readPath(request), this.ignoredRoutes)) {
             next();
 
             return;
@@ -70,5 +78,18 @@ export class HttpMetricsMiddleware implements NestMiddleware {
         response.once('close', record);
 
         next();
+    }
+
+    /**
+     * The request path, without the query string.
+     *
+     * `request.originalUrl` rather than `request.path`: Nest mounts middleware per matched
+     * route, so Express reports `path` as `/` and puts the real path in `baseUrl`. Reading
+     * `path` here matched nothing in the ignore list and the scrape endpoint counted itself.
+     */
+    private static readPath(request: Request): string {
+        const [path] = (request.originalUrl || request.url).split('?');
+
+        return path ?? '/';
     }
 }
