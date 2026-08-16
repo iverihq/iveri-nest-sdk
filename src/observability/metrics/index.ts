@@ -1,4 +1,6 @@
+export * from './database-pool.metric-source';
 export * from './http-metrics.middleware';
+export * from './metric-source.interface';
 export * from './metrics-module-options.interface';
 export * from './metrics.constant';
 export * from './metrics.controller';

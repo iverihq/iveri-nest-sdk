@@ -44,6 +44,8 @@ export class HttpMetricsMiddleware implements NestMiddleware {
         const startedAt = process.hrtime.bigint();
         let recorded = false;
 
+        this.metricsService.trackRequestStarted();
+
         const record = (): void => {
             // `finish` and `close` both fire on a normal response, in that order. Recording once
             // is what makes the pair safe to listen to — and listening to both is deliberate: a
@@ -55,6 +57,7 @@ export class HttpMetricsMiddleware implements NestMiddleware {
 
             recorded = true;
 
+            this.metricsService.trackRequestFinished();
             this.metricsService.observeHttpRequest({
                 method: request.method,
                 route: readRoutePattern(request),
