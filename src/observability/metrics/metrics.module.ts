@@ -5,6 +5,7 @@ import type { MetricsModuleOptions } from './metrics-module-options.interface';
 import { METRICS_MODULE_OPTIONS } from './metrics.constant';
 import { MetricsController } from './metrics.controller';
 import { MetricsService } from './metrics.service';
+import { RetentionSweepMetrics } from './retention-sweep.metrics';
 
 /**
  * Registers `GET /metrics` and starts counting HTTP traffic.
@@ -38,8 +39,13 @@ export class MetricsModule implements NestModule {
         return {
             module: MetricsModule,
             controllers: [MetricsController],
-            providers: [{ provide: METRICS_MODULE_OPTIONS, useValue: options }, MetricsService, HttpMetricsMiddleware],
-            exports: [MetricsService],
+            providers: [
+                { provide: METRICS_MODULE_OPTIONS, useValue: options },
+                MetricsService,
+                RetentionSweepMetrics,
+                HttpMetricsMiddleware,
+            ],
+            exports: [MetricsService, RetentionSweepMetrics],
         };
     }
 

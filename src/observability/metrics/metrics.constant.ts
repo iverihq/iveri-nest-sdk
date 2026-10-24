@@ -67,6 +67,44 @@ export const QUEUE_DEPTH_GAUGE = 'iveri_queue_depth';
 export const DATABASE_POOL_GAUGE = 'iveri_database_pool_connections';
 
 /**
+ * Unix seconds at which a retention sweep last completed, by sweep.
+ *
+ * **The one gauge in this fleet that is deliberately pushed rather than read at scrape time**,
+ * and the reason is the exact inverse of {@link QUEUE_DEPTH_GAUGE}'s. There, a pushed value goes
+ * stale precisely when the processor stops, so a stale number would claim the backlog is fine at
+ * the moment we proved we cannot see it. Here **the staleness is the signal**: the question is
+ * whether the thing that pushes has run, so a value that stops advancing is the answer rather
+ * than a lie about it.
+ *
+ * Seeded at startup with the process's own clock, so a service whose sweep never runs at all
+ * still reports a series that ages — the failure this metric exists for. Without that seed, a
+ * cron that was never registered would produce no series, and an alert comparing against `time()`
+ * would match nothing and stay silent about the loudest case.
+ */
+export const RETENTION_SWEEP_LAST_SUCCESS_GAUGE = 'iveri_retention_sweep_last_success_timestamp_seconds';
+
+/**
+ * Rows a retention sweep has expired, by sweep.
+ *
+ * **Nothing alerts on this, deliberately.** A sweep that runs and expires nothing is the normal
+ * state most hours, so there is no threshold to write — a rule on "zero rows" would fire
+ * constantly, and one on "no rows for a week" would fire on any quiet environment. Its value is
+ * on a dashboard beside the gauge above: a sweep whose timestamp advances while this never moves,
+ * on a service whose tables are visibly growing, is a query that stopped matching — which the
+ * liveness gauge alone cannot distinguish from a correctly idle sweep.
+ */
+export const RETENTION_SWEEP_ROWS_TOTAL = 'iveri_retention_sweep_rows_total';
+
+/**
+ * Label naming one sweep within a service.
+ *
+ * A closed set: every value is a literal written at the call site, so it cannot grow with
+ * customers or data the way a tenant or a queue key chosen outside the company would. The
+ * `service` default label already distinguishes two services that happen to name a sweep alike.
+ */
+export const RETENTION_SWEEP_LABEL = 'sweep';
+
+/**
  * Latency histogram buckets, in seconds.
  *
  * Every bucket is a stored time series per label combination, so this list is a direct cost.
