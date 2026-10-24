@@ -523,6 +523,63 @@ asks about an error.
 
 ---
 
+## `outbox/` — claim, publish, retry, dead-letter
+
+```ts
+export class RideOutboxEventRepository extends OutboxEventRepository<RideOutboxEventEntity> {
+    constructor(@InjectDataSource() dataSource: DataSource) {
+        super(dataSource, RideOutboxEventEntity, 'taxi-ride-outbox');
+    }
+    // enqueue() stays here: mapping an aggregate to a row is the part that genuinely differs
+}
+```
+
+**Five services had written this out identically.** Two of the repositories were 137 lines
+differing in _two_; two of the processors were 120 lines differing only in which environment
+variables they read. That is the evidence this waited for — the second consumer was not enough,
+and the fifth made the duplication the thing most likely to drift in the fleet's reliability core.
+
+What a service still owns:
+
+| Stays in the service                    | Why                                                                 |
+| --------------------------------------- | ------------------------------------------------------------------- |
+| The `@Entity` name, indexes and `CHECK` | Per table, and the constraint's literal strings must not change     |
+| `enqueue`                               | Maps a domain aggregate to a row; the only genuinely different code |
+| The config values                       | Each service reads its own validated environment                    |
+| `publish` and `isPermanentFailure`      | What "sent" and "hopeless" mean is the service's judgement          |
+
+**Extending `OutboxEventEntity` changes no schema, and the acceptance test is
+`migration:generate` coming back empty** — not a green unit suite. TypeORM reads inherited
+`@Column` metadata exactly as it reads a declared one, so a drifted length or default is
+invisible until it is asked.
+
+The decisions carried over, each of which someone will be tempted to undo:
+
+- **`SKIP LOCKED` and no distributed lock.** Two processes claim disjoint sets by construction,
+  and a process that dies mid-batch leaves rows `processing` with an old `claimed_at` rather
+  than a lease elsewhere that has to expire. A Redis lock would be a second source of truth that
+  can disagree with the rows it guards, and would stop publishing whenever Redis is down. Three
+  services reached this conclusion independently.
+- **The claim query is also the crash-recovery path.** A row stuck past `claimTimeoutMs` is
+  re-claimed, which is where at-least-once becomes visible — and why the row id is the gateway's
+  idempotency key.
+- **Every terminal write is constrained by the claim token.** A stale attempt whose row was
+  re-claimed updates nothing and is told so by a `false` return, instead of overwriting what the
+  new owner wrote.
+- **A cycle already running returns 0.** Load-bearing for the e2e suites rather than an
+  optimisation: a background interval landing inside a hand-driven cycle would claim nothing and
+  leave the assertion reading an untouched row. Conduit shipped exactly that flake once.
+- **Full jitter, not plain exponential backoff.** One outage fails every claimed row at the same
+  instant; a shared deterministic delay brings them all back at the same instant too.
+- **Queue depth is read at scrape time and zeroes are reported.** A pushed gauge goes stale
+  exactly when the processor stops, and a vanishing series makes "drained" and "cannot read the
+  table" indistinguishable — the one distinction a dead-letter alert is built on.
+
+**Conduit's and Billing's queues are deliberately not this.** Those rows carry a target URL, an
+attempt budget and a stored response, and their claim does an HTTP call with its own rate-limit
+deferral semantics. Forcing them through one abstraction is how this becomes Conduit's two with
+five special cases bolted on, which is the failure this extraction was held back to avoid.
+
 ## `socket/` — the origin check a websocket handshake does not get
 
 ```ts

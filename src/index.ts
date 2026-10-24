@@ -7,6 +7,7 @@ export * from './entity';
 export * from './exception';
 export * from './health';
 export * from './observability';
+export * from './outbox';
 export * from './rate-limit';
 export * from './redis';
 export * from './repository';
