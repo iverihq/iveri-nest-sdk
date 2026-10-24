@@ -1,6 +1,7 @@
+import type { UUID } from '@iveri/contracts';
+
 import { OutboxEventStatus } from './outbox-event-status.enum';
 import type { OutboxEventEntity } from './outbox-event.entity';
-import type { OutboxEventRepository } from './outbox-event.repository';
 import { nextOutboxAttemptAt } from './outbox-retry.util';
 
 /** The knobs a service reads from its own validated environment. */
@@ -14,6 +15,29 @@ export interface OutboxProcessorConfig {
     backoffMaxMs: number;
 }
 
+/**
+ * What the loop needs of a store, which `OutboxEventRepository` satisfies structurally.
+ *
+ * A role interface rather than a `Pick` of the base class: the base is generic over an entity
+ * that must also be an `ObjectLiteral`, and naming it here pushed that index signature out into
+ * every consumer's own repository type, which then no longer matched. Found by the first consumer
+ * rather than by this package's own tests — a published type is only as good as the first thing
+ * that tries to satisfy it.
+ */
+export interface OutboxEventStore<TEntity extends OutboxEventEntity> {
+    claimDueBatch(dto: { batchSize: number; claimTimeoutMs: number }): Promise<TEntity[]>;
+    markPublished(dto: { id: UUID; tenantId: UUID; claimToken: UUID }): Promise<boolean>;
+    recordFailure(dto: {
+        id: UUID;
+        tenantId: UUID;
+        claimToken: UUID;
+        attemptCount: number;
+        nextAttemptAt: Date | null;
+        isDeadLetter: boolean;
+        lastError: string;
+    }): Promise<boolean>;
+}
+
 /** Just enough of a logger to report a lost lease and a dead letter; `nestjs-pino` satisfies it. */
 export interface OutboxLogger {
     warn(message: unknown, ...rest: unknown[]): void;
@@ -23,10 +47,7 @@ export interface OutboxLogger {
 export interface OutboxProcessorOptions<TEntity extends OutboxEventEntity> {
     /** Names this queue in log lines. Usually the repository's `queue`. */
     name: string;
-    repository: Pick<
-        OutboxEventRepository<TEntity & Record<string, unknown>>,
-        'claimDueBatch' | 'markPublished' | 'recordFailure'
-    >;
+    repository: OutboxEventStore<TEntity>;
     logger: OutboxLogger;
     /**
      * Read per cycle rather than captured once, so a test can change a value after the module is
