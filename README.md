@@ -523,6 +523,36 @@ asks about an error.
 
 ---
 
+## `socket/` — the origin check a websocket handshake does not get
+
+```ts
+const allowRequest = socketOriginAllowRequest(corsOrigins, logger);
+// hand it to Socket.IO's `allowRequest`, not its `cors` option
+```
+
+**A websocket upgrade is not subject to CORS.** The origin list a service passes to
+`enableCors` guards its HTTP routes and nothing else, so a gateway with no handshake check
+accepts a socket from any page on the internet. Both Iveri gateways did, and it was measured
+rather than inferred — a handshake carrying `Origin: http://evil.example.com` connected.
+
+It is not exploitable while a client authenticates by presenting a bearer token it had to obtain
+itself, because a foreign page cannot read the victim's. It becomes cross-site WebSocket
+hijacking the day a gateway authenticates from an ambient credential such as a cookie — a change
+nobody would expect to require an origin review.
+
+**`allowRequest` is the enforcement point and `cors` is not**: that option only sets response
+headers, and nothing reads them on an upgrade. The factory ships beside the predicate because
+this wiring is silent when wrong in both directions — too loose and every origin connects, too
+strict and every native client disappears.
+
+Two allowances are deliberate, and both are pinned by specs:
+
+- **No origin is allowed.** A browser always sends one, so its absence means a native app,
+  another service or a test client. Refusing those takes a mobile app offline and stops nothing.
+- **An empty list allows everything**, matching `enableCors` with `CORS_ORIGINS` unset. One rule
+  for both surfaces beats a stricter default that holds for only one of them — a socket that
+  refused everything while the HTTP routes accepted everything would read as a bug in the socket.
+
 ## What is deliberately not here yet
 
 `outbox/`, `inbox/`, `lock/`, `http/`, `pagination/` and `swagger/` are in
