@@ -492,6 +492,45 @@ export class DeliveryQueueMetrics implements OnModuleInit {
 }
 ```
 
+A feature that owns a **retention sweep** registers it with `RetentionSweepMetrics`, which is the
+one place in this package where a **pushed** gauge is correct:
+
+```ts
+const SWEEP = 'taxi-ride-location';
+
+@Injectable()
+export class RideRetentionService {
+    constructor(private readonly sweepMetrics: RetentionSweepMetrics) {
+        this.sweepMetrics.register(SWEEP);
+    }
+
+    @Cron(CronExpression.EVERY_HOUR, { name: 'taxi-ride-retention-sweep' })
+    async sweep(): Promise<number> {
+        const expired = await this.work();
+        this.sweepMetrics.recordSuccess({ sweep: SWEEP, rows: expired });
+        return expired;
+    }
+}
+```
+
+The reasoning is the **inverse** of queue depth's. There a pushed value goes stale exactly when
+the processor stops, so a stale number claims the backlog is fine at the moment we proved we
+cannot see it. Here the staleness _is_ the signal — the question is whether the thing that pushes
+has run — so `iveri_retention_sweep_last_success_timestamp_seconds` is compared against `time()`
+by a rule generic over the `sweep` label, and a seventh sweep needs no `iveri-infra` change.
+
+**`register` in the constructor is what lets that rule see the worst case.** A sweep whose cron
+was never wired produces no series at all, and a comparison against `time()` would match nothing —
+silent about the loudest failure. Seeding with the process clock turns it into a series that stops
+advancing, which wants the same remedy as every other way a sweep stops. `recordSuccess` is called
+**after** the work, so a sweep that throws partway records nothing and its gauge ages.
+
+`iveri_retention_sweep_rows_total` rides along and **nothing alerts on it**: a sweep that expires
+nothing is the normal state most hours, so there is no threshold to write. It earns its place on a
+dashboard, where a timestamp that advances while the count never moves — on a service whose tables
+are visibly growing — is a query that stopped matching, which the liveness gauge alone cannot tell
+from a correctly idle sweep.
+
 ### Error reporting
 
 `ErrorReporterModule.forRootAsync(...)` provides `ErrorReporterService`. **A missing DSN is a

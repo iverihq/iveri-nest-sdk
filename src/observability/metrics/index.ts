@@ -7,3 +7,4 @@ export * from './metrics.controller';
 export * from './metrics.module';
 export * from './metrics.service';
 export * from './queue-depth-collector.interface';
+export * from './retention-sweep.metrics';
