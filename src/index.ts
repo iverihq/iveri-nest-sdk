@@ -10,4 +10,5 @@ export * from './observability';
 export * from './rate-limit';
 export * from './redis';
 export * from './repository';
+export * from './socket';
 export * from './swagger';
