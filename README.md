@@ -534,10 +534,12 @@ export class RideOutboxEventRepository extends OutboxEventRepository<RideOutboxE
 }
 ```
 
-**Five services had written this out identically.** Two of the repositories were 137 lines
+**Four tables across three services had written this out identically** — `taxi-api`,
+`delivery-api`, and both of `iveri-mobility-api`'s. Two of the repositories were 137 lines
 differing in _two_; two of the processors were 120 lines differing only in which environment
-variables they read. That is the evidence this waited for — the second consumer was not enough,
-and the fifth made the duplication the thing most likely to drift in the fleet's reliability core.
+variables they read; `nextOutboxAttemptAt` was byte-identical in three places apart from a doc
+comment. That is the evidence this waited for — the second consumer was not enough to design
+against, and `iveri-mobility-api`'s dispatch outbox had written down that the third would earn it.
 
 What a service still owns:
 
@@ -575,10 +577,19 @@ The decisions carried over, each of which someone will be tempted to undo:
   exactly when the processor stops, and a vanishing series makes "drained" and "cannot read the
   table" indistinguishable — the one distinction a dead-letter alert is built on.
 
-**Conduit's and Billing's queues are deliberately not this.** Those rows carry a target URL, an
-attempt budget and a stored response, and their claim does an HTTP call with its own rate-limit
-deferral semantics. Forcing them through one abstraction is how this becomes Conduit's two with
-five special cases bolted on, which is the failure this extraction was held back to avoid.
+**Four other queues in the fleet are deliberately not this**, and the distinction is worth
+keeping: this is for a **durable publish intent**, not for every table something claims rows from.
+
+| Queue                                 | Why it is excluded                                                                                                                                |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `conduit-api` delivery, dispatch      | Rows carry a target URL, an attempt budget and a stored response; a rate-limit deferral costs no attempt, which has no meaning for a refetch hint |
+| `iveri-billing-api` payment sessions  | Claims a payment to reconcile against a provider, with its own unknown-state handling                                                             |
+| `iveri-messaging-api` delivery outbox | No status column at all — `processed_at` and `available_at` — and the retry path releases a credit reservation                                    |
+| `iveri-notification-api` deliveries   | A delivery _record_, not an intent: rendered subject and body, provider reference, read receipt, `IN_FLIGHT` rather than `PROCESSING`             |
+
+Forcing those in is how this becomes Conduit's two with four special cases bolted on, which is the
+failure this extraction was held back to avoid. A fifth near-identical publish intent belongs here;
+a table that merely claims rows does not.
 
 ## `socket/` — the origin check a websocket handshake does not get
 
