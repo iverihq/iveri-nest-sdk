@@ -562,6 +562,48 @@ asks about an error.
 
 ---
 
+## `storage/` — one service's object bucket
+
+```ts
+ObjectStorageModule.forRootAsync({
+    inject: [ConfigService],
+    useFactory: (configService: ConfigService<AppEnvConfig, true>) => ({
+        bucket: configService.get('PRODUCT_IMAGE_BUCKET', { infer: true }),
+        endpoint: configService.get('PRODUCT_IMAGE_ENDPOINT', { infer: true }),
+        timeoutMs: configService.get('PRODUCT_IMAGE_TIMEOUT_MS', { infer: true }),
+    }),
+});
+```
+
+Extracted from `delivery-api`'s proof-photo storage when `commerce-api` became the second
+consumer. `put` and `remove`, with the S3 client built from options.
+
+**A bucket per service, never a shared one.** Delivery keeps private evidence and a catalogue
+keeps public images; the two want different policies on the bucket itself, so the wiring is what
+repeats and the bucket is not.
+
+**`@aws-sdk/client-s3` is an _optional_ peer dependency**, unlike every other peer here. Two of
+twelve services need object storage and the AWS SDK is large, so making every image carry it is a
+real cost. A service that imports this module declares the dependency itself.
+
+**Not `@Global()`, unlike `RedisModule`.** One Redis connection is wanted everywhere; a bucket
+belongs to the feature that owns the objects in it, and a second bucket in one service is a
+realistic future a global provider would make awkward.
+
+### What is deliberately not in it
+
+| Left in the service            | Why                                                                                                                                                                                                                                                                          |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Image decoding and re-encoding | `delivery-api` forces every proof photo to JPEG because uniform evidence is the point; a product image keeps its own format and transparency. Different policies over the same library, so extracting one now would mean designing against a real implementation and a guess |
+| A `publicUrl` helper           | A public address depends on a CDN domain the bucket does not know about, and only one of the two consumers needs one                                                                                                                                                         |
+| Retention sweeps               | Which objects may go, and when, is domain knowledge — the module only reports whether one is gone                                                                                                                                                                            |
+
+`remove` **answers `false` rather than throwing**, because its caller is usually a retention
+sweep: a storage outage must leave the row untouched and be retried, since a row marked purged
+while its object survives is the one outcome nobody would notice. `put` throws
+`ServiceUnavailableException` and never forwards the provider's message, which can name the
+bucket and a key — and a key is often a tenant's id.
+
 ## `outbox/` — claim, publish, retry, dead-letter
 
 ```ts
