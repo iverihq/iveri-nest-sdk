@@ -562,7 +562,18 @@ asks about an error.
 
 ---
 
-## `storage/` — one service's object bucket
+## `@iveri/nest-sdk/storage` — one service's object bucket
+
+**Imported from its own entry point, never the root barrel**, because `@aws-sdk/client-s3` is an
+optional peer: a service that does not store objects has not installed it, and a root barrel that
+reached for it would make this whole package unloadable there. 0.22.0 shipped exactly that
+mistake, and `scripts/verify-entry-points.mjs` now loads the built root in a child process with
+the optional peers made unresolvable, which is the only thing that proves a consumer without them
+can import it.
+
+```ts
+import { ObjectStorageModule, ObjectStorageService } from '@iveri/nest-sdk/storage';
+```
 
 ```ts
 ObjectStorageModule.forRootAsync({

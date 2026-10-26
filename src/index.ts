@@ -10,7 +10,6 @@ export * from './observability';
 export * from './outbox';
 export * from './rate-limit';
 export * from './redis';
-export * from './storage';
 export * from './repository';
 export * from './socket';
 export * from './swagger';
