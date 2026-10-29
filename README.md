@@ -615,6 +615,78 @@ while its object survives is the one outcome nobody would notice. `put` throws
 `ServiceUnavailableException` and never forwards the provider's message, which can name the
 bucket and a key — and a key is often a tenant's id.
 
+## `@iveri/nest-sdk/service-token` — one credential, exchanged once
+
+```ts
+ServiceTokenModule.forRootAsync({
+    inject: [ConfigService],
+    useFactory: (configService: ConfigService<AppEnvConfig, true>) => ({
+        identityApiUrl: configService.get('IDENTITY_API_URL', { infer: true }),
+        identityApiKey: configService.get('IDENTITY_API_KEY', { infer: true }),
+        timeoutMs: configService.get('IDENTITY_TIMEOUT_MS', { infer: true }),
+        refreshSkewSeconds: configService.get('SERVICE_TOKEN_REFRESH_SKEW_SECONDS', { infer: true }),
+    }),
+});
+```
+
+A service presents its tenant-scoped identity API key to `POST /auth/token` and gets back a
+short-lived JWT every other service can verify locally. **That indirection is the point**, and
+`conduit-api`'s guide records why: a service cannot check an API key without calling identity on
+its own hot path, which is exactly the cost the stateless-JWT design was made to avoid.
+
+**Extracted at the seventh copy**, well past the second-consumer rule. The six in `taxi-api`,
+`delivery-api`, `iveri-mobility-api`, `iveri-notification-api`, `unibox-api` and `commerce-api`
+were measured the way the outbox family was — normalising identifiers and diffing:
+
+| Pair                                   | Differing lines | What actually differed                            |
+| -------------------------------------- | --------------- | ------------------------------------------------- |
+| `taxi-api` vs `iveri-mobility-api`     | **2**           | A message string, one of them a typo              |
+| `taxi-api` vs `delivery-api`           | 25              | Brace style, error wording                        |
+| `taxi-api` vs `commerce-api`           | 29              | An inlined type, a module constant for the skew   |
+| `taxi-api` vs `unibox-api`             | 57              | The above, plus logging a refusal before throwing |
+| `taxi-api` vs `iveri-notification-api` | 67              | The above, plus `isConfigured()`                  |
+
+The **logic** is the same in all six; the line counts are formatting plus three small knobs, all
+of which the shared version carries. A fleet-wide note had claimed they were separated by
+"cosmetic differences", which was only true of the first row.
+
+### Why it is its own entry point
+
+`@nestjs/axios` and `axios` are **optional** peers, and **seven of fifteen services do not have
+them** — `conduit-api` and `iveri-identity-api` among them. Exporting this from the root barrel
+would make `require('@iveri/nest-sdk')` throw in all seven, which is the 0.22.0 defect exactly.
+`verify-entry-points.mjs` catches it: adding the export and running `pnpm build` fails with
+`Cannot find module '@nestjs/axios'`, which is how this placement was confirmed rather than
+assumed.
+
+### `@Global()`, unlike `ObjectStorageModule`
+
+A bucket belongs to the feature that owns the objects in it, so a second one in a service is a
+realistic future. There is exactly **one** identity credential per deployment, and a second
+instance would be a second cache — which is not untidy but wrong: two caches mint two tokens
+from one API key, doubling the exchanges identity sees and halving the value of the single-flight
+guard. `commerce-api` records reaching the same conclusion about its own client the moment a
+second consumer appeared.
+
+### The three behaviours that are decisions
+
+- **The in-flight promise is correctness, not an optimisation.** A processor waking several
+  claims at once would otherwise mint a token per claim, multiplying the exchanges identity sees
+  by the batch size — on the one endpoint deliberately rate limited per account. A failure is
+  never cached: `finally` clears the promise, so one unreachable identity does not make every
+  later call reuse the rejection.
+- **A 2xx is narrowed, never cast.** The wrong shape would otherwise cache `undefined` as a
+  bearer token and fail every downstream call with a 401, which reads as a permission problem
+  rather than a malformed reply.
+- **A refusal is logged as well as thrown, and carries only its status.** The exception reaches a
+  caller who can only retry, while a refused credential is an operator's problem — and the status
+  is the whole diagnosis (401 a wrong or revoked key, 403 one missing a permission). The response
+  body can quote the credential back, so it is never forwarded.
+
+**An absent credential is a supported state.** `isConfigured()` is how a service whose outbound
+work sits behind a feature flag refuses to arm a processor that could only ever fail, rather than
+discovering the gap on the first attempt and dead-lettering a row for it.
+
 ## `outbox/` — claim, publish, retry, dead-letter
 
 ```ts
