@@ -13,8 +13,8 @@ on:
 
 permissions:
   contents: read
-  # The OIDC token npm trusts in place of a stored secret, and the provenance attestation proving
-  # the tarball was built from this commit in this workflow rather than uploaded from a laptop.
+  # The provenance attestation proving the tarball was built from this commit in this workflow
+  # rather than uploaded from a laptop.
   id-token: write
 
 jobs:
@@ -49,8 +49,11 @@ jobs:
             exit 1
           fi
 
-      # Trusted publishing: npm exchanges this workflow's OIDC token (the `id-token: write`
-      # permission above) for a short-lived publish credential, so no long-lived npm token exists
-      # to leak, expire or be refused. Each package's npmjs.com settings name this repository and
-      # `release.yml` as its trusted publisher. Provenance is attached automatically.
+      # Publishes with the org-level `NPM_TOKEN` secret: a granular npm token for `@iveri` with
+      # read and write, set to bypass 2FA because a workflow cannot answer a one-time code. npm caps
+      # such a token at 90 days, so a release refused with `E404` on the PUT is the token having
+      # expired, not a missing package — replace the secret and re-run the job.
       - run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_PROVENANCE: true
