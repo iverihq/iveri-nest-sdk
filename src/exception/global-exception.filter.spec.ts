@@ -78,6 +78,19 @@ describe('GlobalExceptionFilter', () => {
 
             expect(harness.body().error.correlationId).toBe(CORRELATION_ID);
         });
+
+        it('mints a correlation id when nothing upstream assigned one', () => {
+            // A service that never registered the middleware used to answer with `""`, which a
+            // caller cannot quote and support cannot search for.
+            const filter = new GlobalExceptionFilter();
+            const harness = buildHarness('/tenant/list', {});
+
+            filter.catch(new ValidationFailedException('nope'), harness.host);
+
+            const { correlationId } = harness.body().error;
+            expect(correlationId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u);
+            expect(harness.setHeader).toHaveBeenCalledWith(HeaderKey.CORRELATION_ID, correlationId);
+        });
     });
 
     describe('framework exceptions', () => {
