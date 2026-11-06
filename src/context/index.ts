@@ -1,3 +1,4 @@
+export * from './assign-correlation-id.util.js';
 export * from './context.module.js';
 export * from './correlation-context.interface.js';
 export * from './correlation-id.middleware.js';

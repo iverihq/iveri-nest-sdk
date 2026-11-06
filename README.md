@@ -22,9 +22,11 @@ of substance ride along:
 
 - **`@iveri/nest-sdk/e2e`** — the Testcontainers harness twelve services each carried a copy
   of. See its section below.
-- **`GlobalExceptionFilter` never answers with an empty correlation id.** An error escaping
-  before `CorrelationIdMiddleware` ran used to carry `""`; the filter now mints an id and writes
-  it onto the response header, so body, header and log line agree.
+- **One rule assigns a correlation id: `assignCorrelationId`.** The logger (as pino-http's
+  `genReqId`), `CorrelationIdMiddleware` and `GlobalExceptionFilter` all call it, so an error that
+  escapes before the middleware no longer answers `""`, and the six services' own `genReqId`
+  copies — which accepted an empty or oversized header the middleware then replaced, logging one id
+  and answering another — become one import.
 - **Sentry's own collection is switched off category by category** (`DATA_COLLECTION`), and
   `scrubEvent` now also strips stack-frame local variables.
 
@@ -188,8 +190,15 @@ export class AppModule implements NestModule {
 ```
 
 It echoes an incoming `x-correlation-id` and mints one otherwise, and writes it onto the
-response. `GlobalExceptionFilter` does the same for an error that escapes before the middleware
-ran, so no response carries an empty id.
+response. The rule lives in `assignCorrelationId` — trimmed, non-empty, at most 128 characters —
+and the logger runs before any middleware, so pass it as pino-http's `genReqId` too:
+
+```ts
+pinoHttp: { genReqId: (request) => assignCorrelationId(request), customProps: (request) => ({ correlationId: request.id }) }
+```
+
+`GlobalExceptionFilter` applies the same rule to an error that escapes before the middleware ran,
+so no response carries an empty id.
 
 **`RequestContext`** is explicit. It carries `tenantId`, `userId`, `permissions`, `locale` and
 `correlationId`, is built once at the edge from the authenticated principal, and is threaded
