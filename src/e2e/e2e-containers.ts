@@ -31,7 +31,7 @@ export type E2eGlobalSetup = (project: TestProject) => Promise<() => Promise<voi
  *
  * ```ts
  * // test/helper/global-setup.ts
- * export default e2eGlobalSetup({ database: 'taxi_test', migrations: MIGRATIONS });
+ * export const setup = e2eGlobalSetup({ database: 'taxi_test', migrations: MIGRATIONS });
  * ```
  *
  * **Never the Compose database.** A run must not be able to see or corrupt the data being

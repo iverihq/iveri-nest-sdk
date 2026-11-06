@@ -838,8 +838,11 @@ import { e2eGlobalSetup } from '@iveri/nest-sdk/e2e';
 
 import { MIGRATIONS } from '../../src/database/db-migration/index.js';
 
-export default e2eGlobalSetup({ database: 'taxi_test', migrations: MIGRATIONS, redis: true });
+export const setup = e2eGlobalSetup({ database: 'taxi_test', migrations: MIGRATIONS, redis: true });
 ```
+
+Vitest reads a global-setup file's named `setup` export as readily as a default one, and the named
+form needs no lint exception in a fleet that refuses default exports.
 
 It starts one throwaway Postgres (`E2E_POSTGIS_IMAGE` for a PostGIS service), applies the
 service's **real migrations** to it — never `synchronize`, which would build the schema the
