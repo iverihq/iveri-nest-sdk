@@ -30,10 +30,14 @@ const buildPayload = (overrides: Partial<AccessTokenPayload> = {}): AccessTokenP
     ...overrides,
 });
 
-const buildHarness = (options: { headers?: Record<string, string>; isPublic?: boolean } = {}) => {
+const buildHarness = (
+    options: { headers?: Record<string, string>; isPublic?: boolean; type?: 'http' | 'ws' | 'rpc' } = {},
+) => {
     const request: RequestStub = { headers: options.headers ?? {} };
+    const switchToHttp = vi.fn(() => ({ getRequest: () => request }));
     const context = {
-        switchToHttp: () => ({ getRequest: () => request }),
+        getType: () => options.type ?? 'http',
+        switchToHttp,
         getHandler: () => undefined,
         getClass: () => undefined,
     } as unknown as ExecutionContext;
@@ -45,10 +49,21 @@ const buildHarness = (options: { headers?: Record<string, string>; isPublic?: bo
     const verify = vi.fn<(...args: [string]) => Promise<AccessTokenPayload>>().mockResolvedValue(buildPayload());
     const accessTokenService = { verify } as unknown as AccessTokenService;
 
-    return { guard: new AuthGuard(reflector, accessTokenService), context, request, verify };
+    return { guard: new AuthGuard(reflector, accessTokenService), context, request, verify, switchToHttp };
 };
 
 describe('AuthGuard', () => {
+    // NestJS 12 runs a global guard on every gateway message handler too. A socket message has no
+    // headers, and reading them threw on every realtime subscribe — the gateway authenticates the
+    // socket at the handshake and authorizes subscriptions with grants, so this guard steps aside.
+    it.each(['ws', 'rpc'] as const)('steps aside for a %s context without reading a request', async (type) => {
+        const { guard, context, verify, switchToHttp } = buildHarness({ type });
+
+        await expect(guard.canActivate(context)).resolves.toBe(true);
+        expect(switchToHttp).not.toHaveBeenCalled();
+        expect(verify).not.toHaveBeenCalled();
+    });
+
     it('lets a @Public() route through without looking for a token', async () => {
         const { guard, context, verify } = buildHarness({ isPublic: true });
 
