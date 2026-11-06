@@ -317,6 +317,15 @@ Register `AuthGuard` globally and treat `@Public()` as the exception. **Authenti
 default is what makes a forgotten decorator fail closed**; opt-in guards fail open, silently, on
 the one route nobody re-reviewed.
 
+**`AuthGuard` judges HTTP requests only, and steps aside for a WebSocket or RPC context.** Since
+NestJS 12 a global guard also runs on every gateway message handler (NestJS 11 never applied one),
+and a socket message has no headers to read — so a gateway authenticates its socket itself, once,
+in `handleConnection`, and authorizes what it does with that socket some other way: the realtime
+gateways use signed subscription grants. **A gateway that skips that handshake check is
+unauthenticated**, exactly as it was under NestJS 11. `PermissionGuard` deliberately does _not_
+step aside: a `@RequirePermission` on a socket handler finds no request context and refuses, which
+is loud, where ignoring it would be a permission that silently grants nothing.
+
 **This module verifies and cannot sign.** There is no `sign` method and no `signOptions`, on
 purpose: the moment a consuming service can issue a token it becomes a second identity provider,
 and the shared secret stops being a verification key and starts being a minting key in every repo

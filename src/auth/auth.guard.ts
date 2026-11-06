@@ -39,6 +39,13 @@ interface RequestWithContext extends Request {
  * ingress is the standing example: a provider cannot log in, so it proves itself with an HMAC
  * signature — a different mechanism answering a different question, *did this really come from
  * Stripe* rather than *who is this user*.
+ *
+ * **It judges HTTP requests and nothing else.** Since NestJS 12 a global guard also runs on every
+ * WebSocket message handler — NestJS 11 never applied one to a gateway — and a socket message
+ * carries no headers to read. A gateway authenticates the socket itself, once, at the handshake,
+ * and authorizes each subscription with a signed grant; both realtime gateways were designed and
+ * reviewed against exactly that. Reading headers there threw a `TypeError` on every subscribe, so
+ * the guard steps aside for any context that is not HTTP rather than half-judging one.
  */
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -48,6 +55,10 @@ export class AuthGuard implements CanActivate {
     ) {}
 
     async canActivate(context: ExecutionContext): Promise<boolean> {
+        if (context.getType() !== 'http') {
+            return true;
+        }
+
         if (this.isPublic(context)) {
             return true;
         }
