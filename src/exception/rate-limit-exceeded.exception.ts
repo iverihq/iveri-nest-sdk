@@ -1,7 +1,7 @@
 import { ErrorCode } from '@iveri/contracts';
 import { HttpStatus } from '@nestjs/common';
 
-import { DomainException } from './domain.exception';
+import { DomainException } from './domain.exception.js';
 
 /**
  * The caller exceeded a rate limit.

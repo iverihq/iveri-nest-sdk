@@ -1,39 +1,42 @@
 import { type ApiErrorResponse, ErrorCode } from '@iveri/contracts';
 import { type ArgumentsHost, BadRequestException, HttpStatus, Logger, NotFoundException } from '@nestjs/common';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import type { Mock } from 'vitest';
 
-import { HeaderKey } from '../constant/header-key.constant';
-import { REQUEST_CONTEXT_PROPERTY } from '../context/current-request-context.decorator';
-import type { ErrorReportContext, ErrorReporter } from '../observability/error/error-reporter.interface';
+import { HeaderKey } from '../constant/header-key.constant.js';
+import { REQUEST_CONTEXT_PROPERTY } from '../context/current-request-context.decorator.js';
+import type { ErrorReportContext, ErrorReporter } from '../observability/error/error-reporter.interface.js';
 
-import { GlobalExceptionFilter } from './global-exception.filter';
-import { ResourceNotFoundException } from './resource-not-found.exception';
-import { ServiceUnavailableException } from './service-unavailable.exception';
-import { ValidationFailedException } from './validation-failed.exception';
+import { GlobalExceptionFilter } from './global-exception.filter.js';
+import { ResourceNotFoundException } from './resource-not-found.exception.js';
+import { ServiceUnavailableException } from './service-unavailable.exception.js';
+import { ValidationFailedException } from './validation-failed.exception.js';
 
 const CORRELATION_ID = 'dddddddd-0000-4000-8000-000000000004';
 
 interface Harness {
     host: ArgumentsHost;
-    status: jest.Mock;
-    json: jest.Mock;
+    status: Mock;
+    json: Mock;
+    setHeader: Mock;
     body: () => ApiErrorResponse;
 }
 
-const buildHarness = (path = '/tenant/list'): Harness => {
-    const json = jest.fn();
-    const status = jest.fn().mockReturnValue({ json });
+const buildHarness = (
+    path = '/tenant/list',
+    headers: Record<string, string> = { [HeaderKey.CORRELATION_ID]: CORRELATION_ID },
+): Harness => {
+    const json = vi.fn();
+    const status = vi.fn().mockReturnValue({ json });
+    const setHeader = vi.fn();
     const host = {
         switchToHttp: () => ({
-            getRequest: () => ({
-                path,
-                method: 'GET',
-                headers: { [HeaderKey.CORRELATION_ID]: CORRELATION_ID },
-            }),
-            getResponse: () => ({ status }),
+            getRequest: () => ({ path, method: 'GET', headers }),
+            getResponse: () => ({ status, setHeader, headersSent: false }),
         }),
     } as unknown as ArgumentsHost;
 
-    return { host, status, json, body: () => json.mock.calls[0][0] as ApiErrorResponse };
+    return { host, status, json, setHeader, body: () => json.mock.calls[0][0] as ApiErrorResponse };
 };
 
 describe('GlobalExceptionFilter', () => {
@@ -195,8 +198,9 @@ describe('GlobalExceptionFilter', () => {
             path = '/api/v1/captures/6f1c1a5e-0b6a-4c6e-9d1f-4a2b7c8d9e01',
             route: string | undefined = '/api/v1/captures/:captureId',
         ): Harness => {
-            const json = jest.fn();
-            const status = jest.fn().mockReturnValue({ json });
+            const json = vi.fn();
+            const status = vi.fn().mockReturnValue({ json });
+            const setHeader = vi.fn();
             const host = {
                 switchToHttp: () => ({
                     getRequest: () => ({
@@ -207,11 +211,11 @@ describe('GlobalExceptionFilter', () => {
                         headers: { [HeaderKey.CORRELATION_ID]: CORRELATION_ID },
                         [REQUEST_CONTEXT_PROPERTY]: { tenantId: 'aaaaaaaa-0000-4000-8000-000000000001' },
                     }),
-                    getResponse: () => ({ status }),
+                    getResponse: () => ({ status, setHeader, headersSent: false }),
                 }),
             } as unknown as ArgumentsHost;
 
-            return { host, status, json, body: () => json.mock.calls[0][0] as ApiErrorResponse };
+            return { host, status, json, setHeader, body: () => json.mock.calls[0][0] as ApiErrorResponse };
         };
 
         it('reports an unexpected failure', () => {

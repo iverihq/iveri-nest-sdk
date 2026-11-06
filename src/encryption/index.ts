@@ -1,2 +1,2 @@
-export * from './encryption.constant';
-export * from './encryption.service';
+export * from './encryption.constant.js';
+export * from './encryption.service.js';

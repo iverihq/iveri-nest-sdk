@@ -1,2 +1,2 @@
-export * from './header-key.constant';
-export * from './infrastructure-route.constant';
+export * from './header-key.constant.js';
+export * from './infrastructure-route.constant.js';

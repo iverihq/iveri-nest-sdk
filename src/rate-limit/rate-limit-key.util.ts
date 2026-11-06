@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 
 import type { Maybe } from '@iveri/contracts';
 
-import { RATE_LIMIT_HASH_LENGTH, RATE_LIMIT_KEY_ENTITY } from './rate-limit.constant';
+import { RATE_LIMIT_HASH_LENGTH, RATE_LIMIT_KEY_ENTITY } from './rate-limit.constant.js';
 
 /**
  * Builds a bucket key.

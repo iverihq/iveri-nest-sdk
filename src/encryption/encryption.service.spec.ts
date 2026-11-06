@@ -1,11 +1,12 @@
 import { randomBytes } from 'node:crypto';
 
 import type { ConfigService } from '@nestjs/config';
+import { describe, expect, it } from 'vitest';
 
-import { InternalException } from '../exception/internal.exception';
+import { InternalException } from '../exception/internal.exception.js';
 
-import { ENVELOPE_SEPARATOR, ENVELOPE_VERSION } from './encryption.constant';
-import { EncryptionService, secretsMatch } from './encryption.service';
+import { ENVELOPE_SEPARATOR, ENVELOPE_VERSION } from './encryption.constant.js';
+import { EncryptionService, secretsMatch } from './encryption.service.js';
 
 const buildService = (key: string = randomBytes(32).toString('base64')): EncryptionService =>
     new EncryptionService({ getOrThrow: () => key } as unknown as ConfigService);

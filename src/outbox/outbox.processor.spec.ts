@@ -1,6 +1,9 @@
-import { OutboxEventStatus } from './outbox-event-status.enum';
-import type { OutboxEventEntity } from './outbox-event.entity';
-import { OutboxProcessor, type OutboxProcessorConfig } from './outbox.processor';
+import { describe, expect, it, vi } from 'vitest';
+import type { Mock } from 'vitest';
+
+import { OutboxEventStatus } from './outbox-event-status.enum.js';
+import type { OutboxEventEntity } from './outbox-event.entity.js';
+import { OutboxProcessor, type OutboxProcessorConfig } from './outbox.processor.js';
 
 const CONFIG: OutboxProcessorConfig = {
     isEnabled: true,
@@ -25,23 +28,23 @@ const event = (overrides: Partial<OutboxEventEntity> = {}): OutboxEventEntity =>
 const harness = (
     options: {
         batch?: OutboxEventEntity[];
-        publish?: jest.Mock;
+        publish?: Mock;
         isPermanentFailure?: (error: unknown) => boolean;
         config?: () => OutboxProcessorConfig;
     } = {},
 ) => {
     const repository = {
-        claimDueBatch: jest.fn().mockResolvedValue(options.batch ?? [event()]),
-        markPublished: jest.fn().mockResolvedValue(true),
-        recordFailure: jest.fn().mockResolvedValue(true),
+        claimDueBatch: vi.fn().mockResolvedValue(options.batch ?? [event()]),
+        markPublished: vi.fn().mockResolvedValue(true),
+        recordFailure: vi.fn().mockResolvedValue(true),
     };
-    const logger = { warn: jest.fn(), error: jest.fn() };
+    const logger = { warn: vi.fn(), error: vi.fn() };
     const processor = new OutboxProcessor<OutboxEventEntity>({
         name: 'test',
         repository: repository,
         logger,
         config: options.config ?? ((): OutboxProcessorConfig => CONFIG),
-        publish: options.publish ?? jest.fn().mockResolvedValue(undefined),
+        publish: options.publish ?? vi.fn().mockResolvedValue(undefined),
         isPermanentFailure: options.isPermanentFailure ?? ((): boolean => false),
     });
 
@@ -50,7 +53,7 @@ const harness = (
 
 describe('OutboxProcessor', () => {
     it('publishes each claimed row and completes it against its claim', async () => {
-        const publish = jest.fn().mockResolvedValue(undefined);
+        const publish = vi.fn().mockResolvedValue(undefined);
         const { processor, repository } = harness({ publish });
 
         await expect(processor.runCycle()).resolves.toBe(1);
@@ -67,7 +70,7 @@ describe('OutboxProcessor', () => {
         // Load-bearing for the e2e suites: a background interval landing inside a hand-driven
         // cycle would claim nothing and leave the assertion reading an untouched row.
         let release = (): void => undefined;
-        const publish = jest.fn().mockImplementation(() => new Promise<void>((resolve) => (release = resolve)));
+        const publish = vi.fn().mockImplementation(() => new Promise<void>((resolve) => (release = resolve)));
         const { processor, repository } = harness({ publish });
 
         const first = processor.runCycle();
@@ -81,7 +84,7 @@ describe('OutboxProcessor', () => {
     it('refuses an event with no lease instead of publishing it', async () => {
         // Nothing would constrain the terminal write, so a success could not be recorded and the
         // event would be published again on every cycle.
-        const publish = jest.fn();
+        const publish = vi.fn();
         const { processor, repository, logger } = harness({ batch: [event({ claimToken: null })], publish });
 
         await processor.runCycle();
@@ -92,7 +95,7 @@ describe('OutboxProcessor', () => {
     });
 
     it('refuses an event whose status is not processing', async () => {
-        const publish = jest.fn();
+        const publish = vi.fn();
         const { processor } = harness({ batch: [event({ status: OutboxEventStatus.PENDING })], publish });
 
         await processor.runCycle();
@@ -101,7 +104,7 @@ describe('OutboxProcessor', () => {
     });
 
     it('reschedules a transient failure rather than dead-lettering it', async () => {
-        const publish = jest.fn().mockRejectedValue(new Error('gateway down'));
+        const publish = vi.fn().mockRejectedValue(new Error('gateway down'));
         const { processor, repository, logger } = harness({ publish });
 
         await processor.runCycle();
@@ -122,7 +125,7 @@ describe('OutboxProcessor', () => {
     it('dead-letters a permanent failure on the first attempt', async () => {
         // Four more attempts cannot fix a rejected payload, and they add load to a service that
         // has already said no.
-        const publish = jest.fn().mockRejectedValue(new Error('rejected'));
+        const publish = vi.fn().mockRejectedValue(new Error('rejected'));
         const { processor, repository, logger } = harness({ publish, isPermanentFailure: () => true });
 
         await processor.runCycle();
@@ -137,7 +140,7 @@ describe('OutboxProcessor', () => {
     });
 
     it('dead-letters once the attempt budget is spent', async () => {
-        const publish = jest.fn().mockRejectedValue(new Error('still down'));
+        const publish = vi.fn().mockRejectedValue(new Error('still down'));
         const { processor, repository } = harness({ batch: [event({ attemptCount: 2 })], publish });
 
         await processor.runCycle();
@@ -146,7 +149,7 @@ describe('OutboxProcessor', () => {
     });
 
     it('records a reason even when something threw a non-Error', async () => {
-        const publish = jest.fn().mockRejectedValue('a bare string');
+        const publish = vi.fn().mockRejectedValue('a bare string');
         const { processor, repository } = harness({ publish });
 
         await processor.runCycle();
@@ -155,7 +158,7 @@ describe('OutboxProcessor', () => {
     });
 
     it('reads its config per cycle, so a test can change it after module init', async () => {
-        const config = jest.fn().mockReturnValue(CONFIG);
+        const config = vi.fn().mockReturnValue(CONFIG);
         const { processor } = harness({ config });
 
         await processor.runCycle();

@@ -1,9 +1,10 @@
 import { Inject, Injectable, Module } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+import { describe, expect, it } from 'vitest';
 
-import { READINESS_CHECKS, STARTUP_CHECKS, type HealthCheck } from './health-check.interface';
-import { HealthController } from './health.controller';
-import { HealthModule } from './health.module';
+import { READINESS_CHECKS, STARTUP_CHECKS, type HealthCheck } from './health-check.interface.js';
+import { HealthController } from './health.controller.js';
+import { HealthModule } from './health.module.js';
 
 @Injectable()
 class DatabaseCheck implements HealthCheck {

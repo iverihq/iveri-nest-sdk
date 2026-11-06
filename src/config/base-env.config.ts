@@ -1,8 +1,8 @@
 import { Type } from 'class-transformer';
 import { IsEnum, IsInt, IsOptional, Max, Min } from 'class-validator';
 
-import { Environment } from './environment.enum';
-import { LogLevel } from './log-level.enum';
+import { Environment } from './environment.enum.js';
+import { LogLevel } from './log-level.enum.js';
 
 /**
  * The environment variables every Iveri service reads.

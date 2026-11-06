@@ -1,8 +1,8 @@
 import { type DynamicModule, type FactoryProvider, Global, Module, type ModuleMetadata } from '@nestjs/common';
 
-import type { ErrorReporterModuleOptions } from './error-reporter-module-options.interface';
-import { ERROR_REPORTER_MODULE_OPTIONS } from './error-reporter.constant';
-import { ErrorReporterService } from './error-reporter.service';
+import type { ErrorReporterModuleOptions } from './error-reporter-module-options.interface.js';
+import { ERROR_REPORTER_MODULE_OPTIONS } from './error-reporter.constant.js';
+import { ErrorReporterService } from './error-reporter.service.js';
 
 /** How {@link ErrorReporterModule.forRootAsync} resolves its options. */
 export interface ErrorReporterModuleAsyncOptions extends Pick<ModuleMetadata, 'imports'> {

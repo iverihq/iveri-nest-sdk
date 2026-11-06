@@ -4,10 +4,10 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { AxiosResponse } from 'axios';
 import { firstValueFrom } from 'rxjs';
 
-import { ExternalServiceException } from '../exception';
+import { ExternalServiceException } from '../exception/index.js';
 
-import type { ServiceTokenModuleOptions } from './service-token-module-options.interface';
-import { SERVICE_TOKEN_MODULE_OPTIONS } from './service-token.constant';
+import type { ServiceTokenModuleOptions } from './service-token-module-options.interface.js';
+import { SERVICE_TOKEN_MODULE_OPTIONS } from './service-token.constant.js';
 
 interface CachedToken {
     accessToken: string;

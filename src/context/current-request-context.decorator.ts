@@ -1,9 +1,9 @@
 import { createParamDecorator, type ExecutionContext } from '@nestjs/common';
 import type { Request } from 'express';
 
-import { UnauthenticatedException } from '../exception/unauthenticated.exception';
+import { UnauthenticatedException } from '../exception/unauthenticated.exception.js';
 
-import type { RequestContext } from './request-context.interface';
+import type { RequestContext } from './request-context.interface.js';
 
 /**
  * Property on the Express request object where the authentication layer parks the resolved

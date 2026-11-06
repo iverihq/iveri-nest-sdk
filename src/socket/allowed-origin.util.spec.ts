@@ -1,6 +1,8 @@
 import type { IncomingMessage } from 'node:http';
 
-import { isAllowedSocketOrigin, socketOriginAllowRequest } from './allowed-origin.util';
+import { describe, expect, it, vi } from 'vitest';
+
+import { isAllowedSocketOrigin, socketOriginAllowRequest } from './allowed-origin.util.js';
 
 const ALLOWED = ['http://localhost:5177', 'http://localhost:5179'];
 
@@ -36,7 +38,7 @@ describe('isAllowedSocketOrigin', () => {
 describe('socketOriginAllowRequest', () => {
     it('passes an allowed handshake with no error', () => {
         const allowRequest = socketOriginAllowRequest(ALLOWED);
-        const callback = jest.fn();
+        const callback = vi.fn();
 
         allowRequest(handshake('http://localhost:5179'), callback);
 
@@ -45,7 +47,7 @@ describe('socketOriginAllowRequest', () => {
 
     it('refuses a foreign handshake with a reason', () => {
         const allowRequest = socketOriginAllowRequest(ALLOWED);
-        const callback = jest.fn();
+        const callback = vi.fn();
 
         allowRequest(handshake('http://evil.example.com'), callback);
 
@@ -54,7 +56,7 @@ describe('socketOriginAllowRequest', () => {
 
     it('passes a handshake with no origin header', () => {
         const allowRequest = socketOriginAllowRequest(ALLOWED);
-        const callback = jest.fn();
+        const callback = vi.fn();
 
         allowRequest(handshake(), callback);
 
@@ -66,6 +68,6 @@ describe('socketOriginAllowRequest', () => {
         // optional-call mistake — and it would throw inside a handshake nobody is watching.
         const allowRequest = socketOriginAllowRequest(ALLOWED);
 
-        expect(() => allowRequest(handshake('http://evil.example.com'), jest.fn())).not.toThrow();
+        expect(() => allowRequest(handshake('http://evil.example.com'), vi.fn())).not.toThrow();
     });
 });

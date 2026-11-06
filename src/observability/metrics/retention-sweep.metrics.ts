@@ -1,12 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import type { Counter, Gauge } from 'prom-client';
+import type { Counter, Gauge } from '@prometheus-io/client';
 
 import {
     RETENTION_SWEEP_LABEL,
     RETENTION_SWEEP_LAST_SUCCESS_GAUGE,
     RETENTION_SWEEP_ROWS_TOTAL,
-} from './metrics.constant';
-import { MetricsService } from './metrics.service';
+} from './metrics.constant.js';
+import { MetricsService } from './metrics.service.js';
 
 /** Milliseconds per second, for converting a JavaScript clock to the Prometheus base unit. */
 const MILLISECONDS_PER_SECOND = 1_000;

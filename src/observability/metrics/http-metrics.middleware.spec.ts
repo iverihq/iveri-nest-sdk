@@ -1,7 +1,8 @@
 import type { NextFunction, Request, Response } from 'express';
+import { describe, expect, it } from 'vitest';
 
-import { HttpMetricsMiddleware } from './http-metrics.middleware';
-import type { HttpRequestObservation, MetricsService } from './metrics.service';
+import { HttpMetricsMiddleware } from './http-metrics.middleware.js';
+import type { HttpRequestObservation, MetricsService } from './metrics.service.js';
 
 /** A response that records its listeners so a spec can fire `finish` or `close` by hand. */
 const stubResponse = (statusCode = 200): Response & { emit: (event: string) => void } => {

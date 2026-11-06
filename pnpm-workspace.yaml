@@ -1,0 +1,6 @@
+# pnpm 12 refuses to finish an install while any dependency's build script is unreviewed, so every
+# script is decided here, once, in review.
+allowBuilds:
+  # Install-time telemetry, reached through `@nestjs/swagger` → `swagger-ui-dist`. Nothing in the
+  # package needs it to run.
+  '@scarf/scarf': false

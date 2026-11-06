@@ -1,17 +1,20 @@
 name: Release
 
-# Publishing is driven by a version tag, not by a merge. `npm version patch` writes the
-# package.json bump and the matching tag in one step, so the two can never disagree:
+# Publishing is driven by a version tag, not by a merge. The version bump lands in the PR; after
+# it merges, the merge commit is tagged and that one tag is pushed:
 #
-#   npm version patch && git push --follow-tags
+#   git tag -a v0.25.0 -m v0.25.0 && git push origin v0.25.0
+#
+# Never `--follow-tags`: it also pushes every older local tag that was never pushed, which
+# publishes versions nobody meant to release.
 on:
   push:
     tags: ['v*']
 
 permissions:
   contents: read
-  # Lets npm attach a provenance attestation, proving the tarball was built from this commit
-  # in this workflow rather than uploaded from someone's laptop.
+  # The OIDC token npm trusts in place of a stored secret, and the provenance attestation proving
+  # the tarball was built from this commit in this workflow rather than uploaded from a laptop.
   id-token: write
 
 jobs:
@@ -19,11 +22,11 @@ jobs:
     name: Publish to npm
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
           cache: pnpm
@@ -46,7 +49,8 @@ jobs:
             exit 1
           fi
 
+      # Trusted publishing: npm exchanges this workflow's OIDC token (the `id-token: write`
+      # permission above) for a short-lived publish credential, so no long-lived npm token exists
+      # to leak, expire or be refused. Each package's npmjs.com settings name this repository and
+      # `release.yml` as its trusted publisher. Provenance is attached automatically.
       - run: npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          NPM_CONFIG_PROVENANCE: true

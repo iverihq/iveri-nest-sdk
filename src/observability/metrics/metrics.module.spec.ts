@@ -1,9 +1,10 @@
 import { Test } from '@nestjs/testing';
+import { describe, expect, it } from 'vitest';
 
-import { MetricsController } from './metrics.controller';
-import { MetricsModule } from './metrics.module';
-import { MetricsService } from './metrics.service';
-import type { QueueDepthCollector, QueueDepthReading } from './queue-depth-collector.interface';
+import { MetricsController } from './metrics.controller.js';
+import { MetricsModule } from './metrics.module.js';
+import { MetricsService } from './metrics.service.js';
+import type { QueueDepthCollector, QueueDepthReading } from './queue-depth-collector.interface.js';
 
 const build = async (module: ReturnType<typeof MetricsModule.forRoot>) => {
     const testingModule = await Test.createTestingModule({ imports: [module] }).compile();

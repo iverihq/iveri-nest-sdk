@@ -9,13 +9,13 @@ import {
 } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiServiceUnavailableResponse, ApiTags } from '@nestjs/swagger';
 
-import { Public } from '../auth/public.decorator';
+import { Public } from '../auth/public.decorator.js';
 
-import { LivenessResponseDto } from './dto/liveness-response.dto';
-import { ReadinessResponseDto } from './dto/readiness-response.dto';
-import { StartupResponseDto } from './dto/startup-response.dto';
-import { READINESS_CHECKS, STARTUP_CHECKS, type HealthCheck } from './health-check.interface';
-import { HEALTH_ROUTE_PATH } from './health.constant';
+import { LivenessResponseDto } from './dto/liveness-response.dto.js';
+import { ReadinessResponseDto } from './dto/readiness-response.dto.js';
+import { StartupResponseDto } from './dto/startup-response.dto.js';
+import { READINESS_CHECKS, STARTUP_CHECKS, type HealthCheck } from './health-check.interface.js';
+import { HEALTH_ROUTE_PATH } from './health.constant.js';
 
 /** Per-dependency outcome reported by the readiness and startup probes. */
 interface HealthCheckResult {

@@ -1,7 +1,7 @@
 import type { UUID } from '@iveri/contracts';
 import type { DeepPartial, EntityManager, FindOptionsOrder, FindOptionsRelations, FindOptionsWhere } from 'typeorm';
 
-import type { BaseEntity } from '../entity/base.entity';
+import type { BaseEntity } from '../entity/base.entity.js';
 
 /**
  * The two fields every repository call carries.

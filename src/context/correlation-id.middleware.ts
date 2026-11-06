@@ -3,9 +3,9 @@ import { randomUUID } from 'node:crypto';
 import { Injectable, type NestMiddleware } from '@nestjs/common';
 import type { NextFunction, Request, Response } from 'express';
 
-import { HeaderKey } from '../constant/header-key.constant';
+import { HeaderKey } from '../constant/header-key.constant.js';
 
-import { CorrelationIdService } from './correlation-id.service';
+import { CorrelationIdService } from './correlation-id.service.js';
 
 /**
  * Opens a correlation context for every inbound HTTP request.

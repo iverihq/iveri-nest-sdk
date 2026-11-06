@@ -1,12 +1,12 @@
 import { Inject, Injectable, type NestMiddleware } from '@nestjs/common';
 import type { NextFunction, Request, Response } from 'express';
 
-import { isInfrastructureRoute } from '../../constant/infrastructure-route.constant';
-import { readRoutePattern } from '../route-pattern.util';
+import { isInfrastructureRoute } from '../../constant/infrastructure-route.constant.js';
+import { readRoutePattern } from '../route-pattern.util.js';
 
-import type { MetricsModuleOptions } from './metrics-module-options.interface';
-import { DEFAULT_IGNORED_METRICS_ROUTES, METRICS_MODULE_OPTIONS } from './metrics.constant';
-import { MetricsService } from './metrics.service';
+import type { MetricsModuleOptions } from './metrics-module-options.interface.js';
+import { DEFAULT_IGNORED_METRICS_ROUTES, METRICS_MODULE_OPTIONS } from './metrics.constant.js';
+import { MetricsService } from './metrics.service.js';
 
 const NANOSECONDS_PER_SECOND = 1e9;
 

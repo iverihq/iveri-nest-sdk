@@ -1,14 +1,15 @@
 import { UserPermission } from '@iveri/contracts';
 import type { ExecutionContext } from '@nestjs/common';
 import type { Reflector } from '@nestjs/core';
+import { describe, expect, it } from 'vitest';
 
-import { REQUEST_CONTEXT_PROPERTY } from '../context/current-request-context.decorator';
-import { InsufficientPermissionException } from '../exception/insufficient-permission.exception';
-import { UnauthenticatedException } from '../exception/unauthenticated.exception';
+import { REQUEST_CONTEXT_PROPERTY } from '../context/current-request-context.decorator.js';
+import { InsufficientPermissionException } from '../exception/insufficient-permission.exception.js';
+import { UnauthenticatedException } from '../exception/unauthenticated.exception.js';
 
-import type { AuthenticatedRequestContext } from './authenticated-request-context.interface';
-import { PermissionGuard } from './permission.guard';
-import { REQUIRED_PERMISSIONS_KEY } from './require-permission.decorator';
+import type { AuthenticatedRequestContext } from './authenticated-request-context.interface.js';
+import { PermissionGuard } from './permission.guard.js';
+import { REQUIRED_PERMISSIONS_KEY } from './require-permission.decorator.js';
 
 const buildContext = (granted?: UserPermission[]) => {
     const requestContext: AuthenticatedRequestContext | undefined = granted && {

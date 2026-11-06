@@ -1,9 +1,9 @@
 import { HttpModule } from '@nestjs/axios';
 import { type DynamicModule, type FactoryProvider, Module, type ModuleMetadata } from '@nestjs/common';
 
-import type { ServiceTokenModuleOptions } from './service-token-module-options.interface';
-import { SERVICE_TOKEN_MODULE_OPTIONS } from './service-token.constant';
-import { ServiceTokenService } from './service-token.service';
+import type { ServiceTokenModuleOptions } from './service-token-module-options.interface.js';
+import { SERVICE_TOKEN_MODULE_OPTIONS } from './service-token.constant.js';
+import { ServiceTokenService } from './service-token.service.js';
 
 /** How {@link ServiceTokenModule.forRootAsync} resolves its options. */
 export interface ServiceTokenModuleAsyncOptions extends Pick<ModuleMetadata, 'imports'> {

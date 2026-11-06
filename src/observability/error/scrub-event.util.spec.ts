@@ -1,7 +1,8 @@
 import type { ErrorEvent } from '@sentry/node';
+import { describe, expect, it } from 'vitest';
 
-import { MAX_SCRUB_DEPTH, REDACTED_PLACEHOLDER } from './error-reporter.constant';
-import { scrubEvent } from './scrub-event.util';
+import { MAX_SCRUB_DEPTH, REDACTED_PLACEHOLDER } from './error-reporter.constant.js';
+import { scrubEvent } from './scrub-event.util.js';
 
 /**
  * Sentry's own field names. They are `snake_case` because they are its wire format rather than
@@ -160,6 +161,33 @@ describe('scrubEvent', () => {
             );
 
             expect(scrubbed.breadcrumbs?.[0].data).toEqual({ url: 'https://x', apiKey: REDACTED_PLACEHOLDER });
+        });
+    });
+
+    describe('stack frames', () => {
+        it("drops each frame's local variables and keeps where it was", () => {
+            // A login handler's frame holds the password it was checking. Collection is off at
+            // the source; this pins that switching it on still sends nothing.
+            const scrubbed = scrubEvent(
+                buildEvent({
+                    exception: {
+                        values: [
+                            {
+                                type: 'Error',
+                                stacktrace: {
+                                    frames: [
+                                        { filename: 'auth.service.js', lineno: 42, vars: { password: 'hunter2' } },
+                                    ],
+                                },
+                            },
+                        ],
+                    },
+                }),
+            );
+
+            expect(scrubbed.exception?.values?.[0].stacktrace?.frames).toEqual([
+                { filename: 'auth.service.js', lineno: 42 },
+            ]);
         });
     });
 

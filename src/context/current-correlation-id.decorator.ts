@@ -1,7 +1,7 @@
 import { createParamDecorator, type ExecutionContext } from '@nestjs/common';
 import type { Request } from 'express';
 
-import { HeaderKey } from '../constant/header-key.constant';
+import { HeaderKey } from '../constant/header-key.constant.js';
 
 /**
  * Param decorator resolving the current request's correlation id.

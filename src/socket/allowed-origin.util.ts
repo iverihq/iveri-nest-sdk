@@ -1,6 +1,6 @@
 import type { IncomingMessage } from 'node:http';
 
-import { Logger } from '@nestjs/common';
+import type { Logger } from '@nestjs/common';
 
 /**
  * Whether a socket handshake from `origin` may proceed.

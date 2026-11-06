@@ -1,6 +1,6 @@
 import type { Nullable, UserPermission, UUID } from '@iveri/contracts';
 
-import type { RequestContext } from '../context/request-context.interface';
+import type { RequestContext } from '../context/request-context.interface.js';
 
 /**
  * A {@link RequestContext} built from a verified `iveri-identity-api` access token, narrowed to

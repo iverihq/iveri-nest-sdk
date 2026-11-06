@@ -2,10 +2,10 @@ import { Controller, Get, HttpCode, HttpStatus, Res, VERSION_NEUTRAL } from '@ne
 import { ApiExcludeController } from '@nestjs/swagger';
 import type { Response } from 'express';
 
-import { Public } from '../../auth/public.decorator';
+import { Public } from '../../auth/public.decorator.js';
 
-import { METRICS_ROUTE_PATH } from './metrics.constant';
-import { MetricsService } from './metrics.service';
+import { METRICS_ROUTE_PATH } from './metrics.constant.js';
+import { MetricsService } from './metrics.service.js';
 
 /**
  * `GET /metrics` — the Prometheus scrape endpoint.
@@ -34,7 +34,7 @@ export class MetricsController {
     @Get()
     @HttpCode(HttpStatus.OK)
     async scrape(@Res({ passthrough: true }) response: Response): Promise<string> {
-        // Taken from the registry rather than hardcoded: prom-client negotiates between the
+        // Taken from the registry rather than hardcoded: the client negotiates between the
         // Prometheus text format and OpenMetrics, and a mismatched header is parsed wrongly
         // rather than rejected — the scrape appears to succeed and the values are silently off.
         response.setHeader('Content-Type', this.metricsService.contentType);

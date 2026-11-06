@@ -1,11 +1,12 @@
 import { Controller, Get, Post } from '@nestjs/common';
 import { ModulesContainer } from '@nestjs/core';
 import { Test, type TestingModule } from '@nestjs/testing';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { Public } from '../auth/public.decorator';
-import { RequirePermission } from '../auth/require-permission.decorator';
+import { Public } from '../auth/public.decorator.js';
+import { RequirePermission } from '../auth/require-permission.decorator.js';
 
-import { permissionMatrix, registeredRoutes, undeclaredRoutes } from './registered-route';
+import { permissionMatrix, registeredRoutes, undeclaredRoutes } from './registered-route.js';
 
 @Controller('things')
 class ThingController {

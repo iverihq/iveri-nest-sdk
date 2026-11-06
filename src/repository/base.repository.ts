@@ -1,8 +1,15 @@
 import type { Maybe } from '@iveri/contracts';
-import type { DataSource, EntityManager, EntityTarget, ObjectLiteral, Repository, SelectQueryBuilder } from 'typeorm';
-import type { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity';
+import type {
+    DataSource,
+    EntityManager,
+    EntityTarget,
+    ObjectLiteral,
+    QueryDeepPartialEntity,
+    Repository,
+    SelectQueryBuilder,
+} from 'typeorm';
 
-import type { BaseEntity } from '../entity/base.entity';
+import type { BaseEntity } from '../entity/base.entity.js';
 
 import type {
     CountDto,
@@ -15,8 +22,8 @@ import type {
     SoftDeleteByIdDto,
     UpdateByDto,
     UpdateOneByIdDto,
-} from './base-repository.type';
-import { scopeWhereToTenant, stripManagedColumns } from './tenant-scope.util';
+} from './base-repository.type.js';
+import { scopeWhereToTenant, stripManagedColumns } from './tenant-scope.util.js';
 
 /**
  * Base class for every repository in every Iveri service.

@@ -1,10 +1,14 @@
 import { Inject, Injectable, Logger, type OnApplicationShutdown } from '@nestjs/common';
 import * as Sentry from '@sentry/node';
 
-import type { ErrorReporterModuleOptions } from './error-reporter-module-options.interface';
-import { ERROR_REPORTER_FLUSH_TIMEOUT_MS, ERROR_REPORTER_MODULE_OPTIONS } from './error-reporter.constant';
-import type { ErrorReportContext, ErrorReporter } from './error-reporter.interface';
-import { scrubEvent } from './scrub-event.util';
+import type { ErrorReporterModuleOptions } from './error-reporter-module-options.interface.js';
+import {
+    DATA_COLLECTION,
+    ERROR_REPORTER_FLUSH_TIMEOUT_MS,
+    ERROR_REPORTER_MODULE_OPTIONS,
+} from './error-reporter.constant.js';
+import type { ErrorReportContext, ErrorReporter } from './error-reporter.interface.js';
+import { scrubEvent } from './scrub-event.util.js';
 
 /**
  * Reports unexpected failures to Sentry, or to nothing at all.
@@ -44,10 +48,10 @@ export class ErrorReporterService implements ErrorReporter, OnApplicationShutdow
             environment: options.environment,
             release: options.release ?? undefined,
             sampleRate: options.sampleRate ?? 1,
-            // Never enabled. The defaults are written for an ordinary web application; two
-            // services here hold customers' provider credentials and raw webhook bytes, and
-            // this flag is what decides whether those travel with a stack trace.
-            sendDefaultPii: false,
+            // Every collection category off. The defaults are written for an ordinary web
+            // application; two services here hold customers' provider credentials and raw
+            // webhook bytes, and this is what decides whether those travel with a stack trace.
+            dataCollection: DATA_COLLECTION,
             // Errors only. Tracing would instrument every outbound call in the process — for a
             // gateway whose job is outbound calls, that is a large bill for a question nothing
             // is asking yet, and it is a separate decision from wanting crash reports.

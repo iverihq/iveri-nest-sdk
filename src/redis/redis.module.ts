@@ -1,8 +1,8 @@
 import { type DynamicModule, type FactoryProvider, Global, Module, type ModuleMetadata } from '@nestjs/common';
 
-import type { RedisModuleOptions } from './redis-module-options.interface';
-import { REDIS_MODULE_OPTIONS } from './redis.constant';
-import { RedisService } from './redis.service';
+import type { RedisModuleOptions } from './redis-module-options.interface.js';
+import { REDIS_MODULE_OPTIONS } from './redis.constant.js';
+import { RedisService } from './redis.service.js';
 
 /** How {@link RedisModule.forRootAsync} resolves its options. */
 export interface RedisModuleAsyncOptions extends Pick<ModuleMetadata, 'imports'> {

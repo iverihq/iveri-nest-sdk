@@ -1,9 +1,10 @@
 import { IsNotEmpty, IsString } from 'class-validator';
+import { describe, expect, it } from 'vitest';
 
-import { BaseEnvConfig } from './base-env.config';
-import { Environment } from './environment.enum';
-import { LogLevel } from './log-level.enum';
-import { validateEnv } from './validate-env.util';
+import { BaseEnvConfig } from './base-env.config.js';
+import { Environment } from './environment.enum.js';
+import { LogLevel } from './log-level.enum.js';
+import { validateEnv } from './validate-env.util.js';
 
 class AppEnvConfig extends BaseEnvConfig {
     @IsString()

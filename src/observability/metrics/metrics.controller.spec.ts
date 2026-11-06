@@ -1,12 +1,13 @@
 import { RequestMethod, VERSION_NEUTRAL } from '@nestjs/common';
 import { CONTROLLER_WATERMARK, PATH_METADATA, VERSION_METADATA } from '@nestjs/common/constants';
 import type { Response } from 'express';
+import { describe, expect, it } from 'vitest';
 
-import { IS_PUBLIC_KEY } from '../../auth/public.decorator';
+import { IS_PUBLIC_KEY } from '../../auth/public.decorator.js';
 
-import { METRICS_ROUTE_EXCLUSIONS, METRICS_ROUTE_PATH } from './metrics.constant';
-import { MetricsController } from './metrics.controller';
-import type { MetricsService } from './metrics.service';
+import { METRICS_ROUTE_EXCLUSIONS, METRICS_ROUTE_PATH } from './metrics.constant.js';
+import { MetricsController } from './metrics.controller.js';
+import type { MetricsService } from './metrics.service.js';
 
 const stubResponse = (): Response & { headers: Record<string, string> } => {
     const headers: Record<string, string> = {};

@@ -1,3 +1,3 @@
-export * from './base-repository.type';
-export * from './base.repository';
-export * from './tenant-scope.util';
+export * from './base-repository.type.js';
+export * from './base.repository.js';
+export * from './tenant-scope.util.js';

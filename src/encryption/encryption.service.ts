@@ -3,7 +3,7 @@ import { createCipheriv, createDecipheriv, randomBytes, timingSafeEqual } from '
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
-import { InternalException } from '../exception/internal.exception';
+import { InternalException } from '../exception/internal.exception.js';
 
 import {
     ENCRYPTION_ALGORITHM,
@@ -12,7 +12,7 @@ import {
     ENCRYPTION_KEY_BYTES,
     ENVELOPE_SEPARATOR,
     ENVELOPE_VERSION,
-} from './encryption.constant';
+} from './encryption.constant.js';
 
 /** Number of base64 fields in a serialized envelope, after the version marker. */
 const ENVELOPE_FIELD_COUNT = 5;

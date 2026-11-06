@@ -4,6 +4,7 @@
     "rootDir": "./src",
     "outDir": "./dist"
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist"]
+  // Specs are included so type-aware linting and the editor can see them; the build config
+  // leaves them out of the emitted output.
+  "include": ["src/**/*"]
 }
