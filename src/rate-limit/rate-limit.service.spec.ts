@@ -1,8 +1,9 @@
 import type { Redis } from 'ioredis';
+import { describe, expect, it } from 'vitest';
 
-import type { RedisService } from '../redis/redis.service';
+import type { RedisService } from '../redis/redis.service.js';
 
-import { RateLimitService } from './rate-limit.service';
+import { RateLimitService } from './rate-limit.service.js';
 
 /** The four arguments the Lua script takes after its key, as strings on the wire. */
 type BucketCall = [string, string, string, string, string];

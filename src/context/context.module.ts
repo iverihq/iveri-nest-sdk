@@ -1,7 +1,7 @@
 import { Global, Module } from '@nestjs/common';
 
-import { CorrelationIdMiddleware } from './correlation-id.middleware';
-import { CorrelationIdService } from './correlation-id.service';
+import { CorrelationIdMiddleware } from './correlation-id.middleware.js';
+import { CorrelationIdService } from './correlation-id.service.js';
 
 /**
  * Provides the correlation plumbing.

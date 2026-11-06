@@ -8,10 +8,10 @@ import {
     type HistogramConfiguration,
     Registry,
     collectDefaultMetrics,
-} from 'prom-client';
+} from '@prometheus-io/client';
 
-import type { MetricSource } from './metric-source.interface';
-import type { MetricsModuleOptions } from './metrics-module-options.interface';
+import type { MetricSource } from './metric-source.interface.js';
+import type { MetricsModuleOptions } from './metrics-module-options.interface.js';
 import {
     HTTP_DURATION_BUCKETS_SECONDS,
     HTTP_REQUESTS_IN_FLIGHT,
@@ -20,8 +20,8 @@ import {
     METRICS_MODULE_OPTIONS,
     QUEUE_DEPTH_GAUGE,
     STATUS_CODE_LABEL,
-} from './metrics.constant';
-import type { QueueDepthCollector } from './queue-depth-collector.interface';
+} from './metrics.constant.js';
+import type { QueueDepthCollector } from './queue-depth-collector.interface.js';
 
 /** One request, as recorded by {@link MetricsService.observeHttpRequest}. */
 export interface HttpRequestObservation {
@@ -38,7 +38,7 @@ const HTTP_LABEL_NAMES = ['method', 'route', 'status_code'] as const;
 /**
  * Owns this process's metric registry and everything registered into it.
  *
- * **The registry is private to the instance, not prom-client's global default.** Two reasons,
+ * **The registry is private to the instance, not the Prometheus client's global default.** Two reasons,
  * and the second is the one that bites: a library that registers into the global registry
  * would silently appear in our scrape output, and — more immediately — registering the same
  * metric name twice throws, so a second `MetricsModule` in a test run would fail on import
@@ -120,7 +120,7 @@ export class MetricsService implements OnApplicationShutdown {
     /**
      * Renders the whole registry in the Prometheus exposition format.
      *
-     * Queue depths are refreshed here rather than through prom-client's per-gauge `collect`
+     * Queue depths are refreshed here rather than through the client's per-gauge `collect`
      * hook, so that the one path which produces a scrape is also the one that populates it —
      * there is no way to render a stale gauge by reaching for the registry directly.
      */
@@ -173,7 +173,7 @@ export class MetricsService implements OnApplicationShutdown {
      * Registers a domain counter — something that only ever goes up, like messages sent or
      * signatures rejected.
      *
-     * These factories exist so a feature can own a metric without importing `prom-client` and
+     * These factories exist so a feature can own a metric without importing `@prometheus-io/client` and
      * without reaching for {@link getRegistry}, which is the version of this that ends with ten
      * services each registering into a registry slightly differently.
      *

@@ -1,4 +1,6 @@
-import { CorrelationIdService } from './correlation-id.service';
+import { beforeEach, describe, expect, it } from 'vitest';
+
+import { CorrelationIdService } from './correlation-id.service.js';
 
 const CORRELATION_ID = 'eeeeeeee-0000-4000-8000-000000000005';
 

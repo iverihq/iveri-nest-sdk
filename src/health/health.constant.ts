@@ -1,5 +1,5 @@
 import { RequestMethod } from '@nestjs/common';
-import type { RouteInfo } from '@nestjs/common/interfaces';
+import type { RouteInfo } from '@nestjs/common/interfaces/index.js';
 
 /** Base path the probes are mounted on. */
 export const HEALTH_ROUTE_PATH = 'health';

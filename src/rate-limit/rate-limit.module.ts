@@ -1,8 +1,8 @@
 import { type DynamicModule, Global, Module } from '@nestjs/common';
 
-import type { RateLimitModuleOptions } from './rate-limit-module-options.interface';
-import { RATE_LIMIT_MODULE_OPTIONS } from './rate-limit.constant';
-import { RateLimitService } from './rate-limit.service';
+import type { RateLimitModuleOptions } from './rate-limit-module-options.interface.js';
+import { RATE_LIMIT_MODULE_OPTIONS } from './rate-limit.constant.js';
+import { RateLimitService } from './rate-limit.service.js';
 
 /**
  * Provides {@link RateLimitService}.

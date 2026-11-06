@@ -2,8 +2,8 @@ import { RequestMethod } from '@nestjs/common';
 import { METHOD_METADATA, PATH_METADATA } from '@nestjs/common/constants';
 import { MetadataScanner, ModulesContainer } from '@nestjs/core';
 
-import { IS_PUBLIC_KEY } from '../auth/public.decorator';
-import { REQUIRED_PERMISSIONS_KEY } from '../auth/require-permission.decorator';
+import { IS_PUBLIC_KEY } from '../auth/public.decorator.js';
+import { REQUIRED_PERMISSIONS_KEY } from '../auth/require-permission.decorator.js';
 
 /**
  * Anything that can resolve Nest's module container: an `INestApplication`, or a `TestingModule`.

@@ -1,8 +1,8 @@
 import { type DynamicModule, Global, Module } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 
-import { AccessTokenService } from './access-token.service';
-import type { AuthModuleAsyncOptions, AuthModuleOptions } from './auth-module-options.interface';
+import { AccessTokenService } from './access-token.service.js';
+import type { AuthModuleAsyncOptions, AuthModuleOptions } from './auth-module-options.interface.js';
 
 /** Injection token for the resolved {@link AuthModuleOptions}. */
 export const AUTH_MODULE_OPTIONS = 'IVERI_AUTH_MODULE_OPTIONS';

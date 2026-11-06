@@ -1,7 +1,9 @@
 import { ServiceUnavailableException } from '@nestjs/common';
+import { describe, expect, it, vi } from 'vitest';
+import type { Mock } from 'vitest';
 
-import type { ObjectStorageModuleOptions } from './object-storage-module-options.interface';
-import { ObjectStorageService } from './object-storage.service';
+import type { ObjectStorageModuleOptions } from './object-storage-module-options.interface.js';
+import { ObjectStorageService } from './object-storage.service.js';
 
 /**
  * The two behaviours that are decisions rather than plumbing.
@@ -13,18 +15,18 @@ import { ObjectStorageService } from './object-storage.service';
 describe('ObjectStorageService', () => {
     const options: ObjectStorageModuleOptions = { bucket: 'images', timeoutMs: 1_000 };
 
-    const serviceWith = (send: jest.Mock): ObjectStorageService => {
+    const serviceWith = (send: Mock): ObjectStorageService => {
         const service = new ObjectStorageService(options);
 
         // The client is built in the constructor from options; replacing `send` is the narrowest
         // seam that exercises the error handling without standing up a bucket.
-        (service as unknown as { client: { send: jest.Mock } }).client = { send };
+        (service as unknown as { client: { send: Mock } }).client = { send };
 
         return service;
     };
 
     it('reports a failed upload as unavailable, without the provider’s message', async () => {
-        const send = jest.fn().mockRejectedValue(new Error('NoSuchBucket: images/tenant-4f2b/photo.jpg'));
+        const send = vi.fn().mockRejectedValue(new Error('NoSuchBucket: images/tenant-4f2b/photo.jpg'));
 
         await expect(
             serviceWith(send).put({ key: 'k', bytes: Buffer.from('x'), contentType: 'image/jpeg' }),
@@ -38,7 +40,7 @@ describe('ObjectStorageService', () => {
     });
 
     it('answers false from remove rather than throwing', async () => {
-        const send = jest.fn().mockRejectedValue(new Error('timeout'));
+        const send = vi.fn().mockRejectedValue(new Error('timeout'));
 
         // The caller is a retention sweep: a storage outage must leave the row untouched and be
         // retried next pass. Throwing here would abort a batch that is otherwise fine, and a row
@@ -49,11 +51,11 @@ describe('ObjectStorageService', () => {
     it('answers true when the object is gone', async () => {
         // S3 treats deleting an absent key as success, which is what makes a retried sweep
         // idempotent rather than needing to check first.
-        await expect(serviceWith(jest.fn().mockResolvedValue({})).remove('k')).resolves.toBe(true);
+        await expect(serviceWith(vi.fn().mockResolvedValue({})).remove('k')).resolves.toBe(true);
     });
 
     it('sends the caller’s content type and cache control', async () => {
-        const send = jest.fn().mockResolvedValue({});
+        const send = vi.fn().mockResolvedValue({});
 
         await serviceWith(send).put({
             key: 'products/1.webp',

@@ -1,6 +1,7 @@
 import type { Request } from 'express';
+import { describe, expect, it } from 'vitest';
 
-import { UNMATCHED_ROUTE_LABEL, readRoutePattern } from './route-pattern.util';
+import { UNMATCHED_ROUTE_LABEL, readRoutePattern } from './route-pattern.util.js';
 
 const stubRequest = (overrides: Partial<Request> = {}): Request =>
     ({ method: 'GET', path: '/api/v1/captures', baseUrl: '', ...overrides }) as unknown as Request;

@@ -3,12 +3,12 @@ import { type CanActivate, type ExecutionContext, Injectable } from '@nestjs/com
 import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
 
-import { REQUEST_CONTEXT_PROPERTY } from '../context/current-request-context.decorator';
-import { InsufficientPermissionException } from '../exception/insufficient-permission.exception';
-import { UnauthenticatedException } from '../exception/unauthenticated.exception';
+import { REQUEST_CONTEXT_PROPERTY } from '../context/current-request-context.decorator.js';
+import { InsufficientPermissionException } from '../exception/insufficient-permission.exception.js';
+import { UnauthenticatedException } from '../exception/unauthenticated.exception.js';
 
-import type { AuthenticatedRequestContext } from './authenticated-request-context.interface';
-import { REQUIRED_PERMISSIONS_KEY } from './require-permission.decorator';
+import type { AuthenticatedRequestContext } from './authenticated-request-context.interface.js';
+import { REQUIRED_PERMISSIONS_KEY } from './require-permission.decorator.js';
 
 interface RequestWithContext extends Request {
     [REQUEST_CONTEXT_PROPERTY]?: AuthenticatedRequestContext;

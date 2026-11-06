@@ -1,9 +1,9 @@
 import type { UUID } from '@iveri/contracts';
 import { Column } from 'typeorm';
 
-import { BaseEntity } from '../entity';
+import { BaseEntity } from '../entity/index.js';
 
-import { OutboxEventStatus } from './outbox-event-status.enum';
+import { OutboxEventStatus } from './outbox-event-status.enum.js';
 
 /**
  * The columns a durable publish intent carries, shared by every service's outbox table.

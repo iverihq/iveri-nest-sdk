@@ -1,9 +1,11 @@
 import type { UUID } from '@iveri/contracts';
 import type { DataSource, EntityManager, Repository } from 'typeorm';
+import { describe, expect, it, vi } from 'vitest';
+import type { Mock, Mocked } from 'vitest';
 
-import { BaseEntity } from '../entity/base.entity';
+import { BaseEntity } from '../entity/base.entity.js';
 
-import { BaseRepository } from './base.repository';
+import { BaseRepository } from './base.repository.js';
 
 class ConversationEntity extends BaseEntity {
     contactId: UUID;
@@ -28,24 +30,24 @@ const CONVERSATION_ID: UUID = 'cccccccc-0000-4000-8000-000000000003';
  */
 const buildHarness = (): {
     repository: ConversationRepository;
-    typeOrmRepository: jest.Mocked<
+    typeOrmRepository: Mocked<
         Pick<Repository<ConversationEntity>, 'findOne' | 'find' | 'save' | 'update' | 'softDelete' | 'count'>
     >;
     dataSource: DataSource;
-    getRepository: jest.Mock;
+    getRepository: Mock;
 } => {
     const typeOrmRepository = {
-        findOne: jest.fn().mockResolvedValue(null),
-        find: jest.fn().mockResolvedValue([]),
-        save: jest.fn().mockImplementation((entity: unknown) => Promise.resolve(entity)),
-        update: jest.fn().mockResolvedValue({ affected: 1 }),
-        softDelete: jest.fn().mockResolvedValue({ affected: 1 }),
-        count: jest.fn().mockResolvedValue(0),
-    } as unknown as jest.Mocked<
+        findOne: vi.fn().mockResolvedValue(null),
+        find: vi.fn().mockResolvedValue([]),
+        save: vi.fn().mockImplementation((entity: unknown) => Promise.resolve(entity)),
+        update: vi.fn().mockResolvedValue({ affected: 1 }),
+        softDelete: vi.fn().mockResolvedValue({ affected: 1 }),
+        count: vi.fn().mockResolvedValue(0),
+    } as unknown as Mocked<
         Pick<Repository<ConversationEntity>, 'findOne' | 'find' | 'save' | 'update' | 'softDelete' | 'count'>
     >;
 
-    const getRepository = jest.fn().mockReturnValue(typeOrmRepository);
+    const getRepository = vi.fn().mockReturnValue(typeOrmRepository);
     const dataSource = { manager: { getRepository } } as unknown as DataSource;
 
     return { repository: new ConversationRepository(dataSource), typeOrmRepository, dataSource, getRepository };
@@ -165,9 +167,7 @@ describe('BaseRepository', () => {
     describe('transaction propagation', () => {
         it('uses the caller-supplied EntityManager when one is passed', async () => {
             const { repository, getRepository } = buildHarness();
-            const transactionalGetRepository = jest
-                .fn()
-                .mockReturnValue({ findOne: jest.fn().mockResolvedValue(null) });
+            const transactionalGetRepository = vi.fn().mockReturnValue({ findOne: vi.fn().mockResolvedValue(null) });
             const manager = { getRepository: transactionalGetRepository } as unknown as EntityManager;
 
             await repository.findOneById({ tenantId: TENANT, id: CONVERSATION_ID, manager });

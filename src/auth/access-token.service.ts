@@ -3,8 +3,8 @@ import { type AccessTokenPayload, PrincipalType } from '@iveri/contracts/identit
 import { Injectable } from '@nestjs/common';
 import { JwtService, TokenExpiredError } from '@nestjs/jwt';
 
-import { TokenExpiredException } from '../exception/token-expired.exception';
-import { UnauthenticatedException } from '../exception/unauthenticated.exception';
+import { TokenExpiredException } from '../exception/token-expired.exception.js';
+import { UnauthenticatedException } from '../exception/unauthenticated.exception.js';
 
 /**
  * Verifies access tokens issued by `iveri-identity-api`.

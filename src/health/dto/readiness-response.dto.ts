@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-import { HealthCheckResultDto } from './health-check-result.dto';
+import { HealthCheckResultDto } from './health-check-result.dto.js';
 
 export class ReadinessResponseDto {
     @ApiProperty({ enum: ['ready', 'not_ready'], example: 'ready' })

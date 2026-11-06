@@ -1,7 +1,7 @@
 import { type DynamicModule, Module, type ModuleMetadata, type Provider, type Type } from '@nestjs/common';
 
-import { READINESS_CHECKS, STARTUP_CHECKS, type HealthCheck } from './health-check.interface';
-import { HealthController } from './health.controller';
+import { READINESS_CHECKS, STARTUP_CHECKS, type HealthCheck } from './health-check.interface.js';
+import { HealthController } from './health.controller.js';
 
 export interface HealthModuleOptions {
     /**

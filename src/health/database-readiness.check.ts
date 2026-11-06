@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 
-import type { HealthCheck } from './health-check.interface';
+import type { HealthCheck } from './health-check.interface.js';
 
 /**
  * Health check that proves the database is actually reachable.

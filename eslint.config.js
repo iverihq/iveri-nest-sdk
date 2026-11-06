@@ -1,10 +1,3 @@
-const { nest } = require('@iveri/eslint-config');
+import { nest } from '@iveri/eslint-config';
 
-module.exports = [
-    ...nest,
-    {
-        languageOptions: {
-            parserOptions: { tsconfigRootDir: __dirname },
-        },
-    },
-];
+export default [...nest, { languageOptions: { parserOptions: { tsconfigRootDir: import.meta.dirname } } }];

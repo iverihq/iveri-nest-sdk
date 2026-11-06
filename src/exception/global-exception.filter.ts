@@ -2,14 +2,15 @@ import { type ApiErrorResponse, ErrorCode, type Maybe } from '@iveri/contracts';
 import { type ArgumentsHost, Catch, type ExceptionFilter, HttpException, HttpStatus, Logger } from '@nestjs/common';
 import type { Request, Response } from 'express';
 
-import { HeaderKey } from '../constant/header-key.constant';
-import { isInfrastructureRoute } from '../constant/infrastructure-route.constant';
-import { REQUEST_CONTEXT_PROPERTY } from '../context/current-request-context.decorator';
-import type { RequestContext } from '../context/request-context.interface';
-import type { ErrorReporter } from '../observability/error/error-reporter.interface';
-import { readRoutePattern } from '../observability/route-pattern.util';
+import { HeaderKey } from '../constant/header-key.constant.js';
+import { isInfrastructureRoute } from '../constant/infrastructure-route.constant.js';
+import { assignCorrelationId } from '../context/assign-correlation-id.util.js';
+import { REQUEST_CONTEXT_PROPERTY } from '../context/current-request-context.decorator.js';
+import type { RequestContext } from '../context/request-context.interface.js';
+import type { ErrorReporter } from '../observability/error/error-reporter.interface.js';
+import { readRoutePattern } from '../observability/route-pattern.util.js';
 
-import { DomainException } from './domain.exception';
+import { DomainException } from './domain.exception.js';
 
 /** Message returned in place of an unexpected error's own, which is logged but never sent. */
 const GENERIC_INTERNAL_MESSAGE = 'An unexpected error occurred';
@@ -114,7 +115,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         const response = http.getResponse<Response>();
 
         const normalized = this.normalize(exception);
-        const correlationId = this.readCorrelationId(request);
+        const correlationId = this.resolveCorrelationId(request, response);
 
         this.log(exception, normalized, request, correlationId);
         this.report(exception, normalized, request, correlationId);
@@ -283,10 +284,21 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         return this.readStringProperty(requestContext, 'tenantId' satisfies keyof RequestContext);
     }
 
-    private readCorrelationId(request: Request): string {
-        const value = request.headers[HeaderKey.CORRELATION_ID];
+    /**
+     * The id the logger and `CorrelationIdMiddleware` assigned, or — for an error that escaped
+     * before either ran, a service that never registered the middleware or a body-parser rejection —
+     * one assigned here by the same rule. It is written onto the response too, so the body, the
+     * response header and this filter's own log line agree; an empty id would give the caller
+     * nothing to quote and support nothing to search for.
+     */
+    private resolveCorrelationId(request: Request, response: Response): string {
+        const correlationId = assignCorrelationId(request);
 
-        return (Array.isArray(value) ? value[0] : value) ?? '';
+        if (!response.headersSent) {
+            response.setHeader(HeaderKey.CORRELATION_ID, correlationId);
+        }
+
+        return correlationId;
     }
 
     /**

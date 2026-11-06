@@ -1,11 +1,11 @@
 import { type DynamicModule, Global, type MiddlewareConsumer, Module, type NestModule } from '@nestjs/common';
 
-import { HttpMetricsMiddleware } from './http-metrics.middleware';
-import type { MetricsModuleOptions } from './metrics-module-options.interface';
-import { METRICS_MODULE_OPTIONS } from './metrics.constant';
-import { MetricsController } from './metrics.controller';
-import { MetricsService } from './metrics.service';
-import { RetentionSweepMetrics } from './retention-sweep.metrics';
+import { HttpMetricsMiddleware } from './http-metrics.middleware.js';
+import type { MetricsModuleOptions } from './metrics-module-options.interface.js';
+import { METRICS_MODULE_OPTIONS } from './metrics.constant.js';
+import { MetricsController } from './metrics.controller.js';
+import { MetricsService } from './metrics.service.js';
+import { RetentionSweepMetrics } from './retention-sweep.metrics.js';
 
 /**
  * Registers `GET /metrics` and starts counting HTTP traffic.

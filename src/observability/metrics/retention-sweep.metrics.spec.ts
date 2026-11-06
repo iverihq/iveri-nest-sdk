@@ -1,7 +1,9 @@
-import type { MetricsModuleOptions } from './metrics-module-options.interface';
-import { RETENTION_SWEEP_LAST_SUCCESS_GAUGE, RETENTION_SWEEP_ROWS_TOTAL } from './metrics.constant';
-import { MetricsService } from './metrics.service';
-import { RetentionSweepMetrics } from './retention-sweep.metrics';
+import { describe, expect, it, vi } from 'vitest';
+
+import type { MetricsModuleOptions } from './metrics-module-options.interface.js';
+import { RETENTION_SWEEP_LAST_SUCCESS_GAUGE, RETENTION_SWEEP_ROWS_TOTAL } from './metrics.constant.js';
+import { MetricsService } from './metrics.service.js';
+import { RetentionSweepMetrics } from './retention-sweep.metrics.js';
 
 const OPTIONS: MetricsModuleOptions = { serviceName: 'taxi-api', collectDefaultMetrics: false };
 
@@ -44,13 +46,13 @@ describe('RetentionSweepMetrics', () => {
         sweeps.register(SWEEP);
         const seeded = sampleFor(await metrics.render(), RETENTION_SWEEP_LAST_SUCCESS_GAUGE, SWEEP);
 
-        jest.spyOn(Date, 'now').mockReturnValue((seeded! + 3_600) * 1_000);
+        vi.spyOn(Date, 'now').mockReturnValue((seeded! + 3_600) * 1_000);
         sweeps.recordSuccess({ sweep: SWEEP, rows: 7 });
 
         const scraped = await metrics.render();
         expect(sampleFor(scraped, RETENTION_SWEEP_LAST_SUCCESS_GAUGE, SWEEP)).toBeCloseTo(seeded! + 3_600, 0);
         expect(sampleFor(scraped, RETENTION_SWEEP_ROWS_TOTAL, SWEEP)).toBe(7);
-        jest.restoreAllMocks();
+        vi.restoreAllMocks();
     });
 
     it('advances the timestamp even when a sweep expires nothing', async () => {
@@ -58,7 +60,7 @@ describe('RetentionSweepMetrics', () => {
         sweeps.register(SWEEP);
         const seeded = sampleFor(await metrics.render(), RETENTION_SWEEP_LAST_SUCCESS_GAUGE, SWEEP);
 
-        jest.spyOn(Date, 'now').mockReturnValue((seeded! + 3_600) * 1_000);
+        vi.spyOn(Date, 'now').mockReturnValue((seeded! + 3_600) * 1_000);
         sweeps.recordSuccess({ sweep: SWEEP, rows: 0 });
 
         // A sweep that finds nothing is the normal state most hours, and it is still a sweep that
@@ -66,7 +68,7 @@ describe('RetentionSweepMetrics', () => {
         const scraped = await metrics.render();
         expect(sampleFor(scraped, RETENTION_SWEEP_LAST_SUCCESS_GAUGE, SWEEP)).toBeCloseTo(seeded! + 3_600, 0);
         expect(sampleFor(scraped, RETENTION_SWEEP_ROWS_TOTAL, SWEEP)).toBe(0);
-        jest.restoreAllMocks();
+        vi.restoreAllMocks();
     });
 
     it('keeps two sweeps in one service apart', async () => {

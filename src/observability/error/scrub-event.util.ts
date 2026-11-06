@@ -5,15 +5,16 @@ import {
     REDACTED_PLACEHOLDER,
     REPORTABLE_HEADER_NAMES,
     SENSITIVE_KEY_PATTERN,
-} from './error-reporter.constant';
+} from './error-reporter.constant.js';
 
 /**
  * Strips everything from an outbound error report that we are not willing to store in a third
  * party's database.
  *
- * This function is the entire safety case for sending errors off the machine, and it is why
- * `sendDefaultPii` is never enabled: the SDK's defaults are written for an ordinary web
- * application, and two Iveri services are not ordinary.
+ * This function is the last line of the safety case for sending errors off the machine; the
+ * first is `DATA_COLLECTION`, which stops the SDK collecting most of this at all. Both
+ * exist because the SDK's defaults are written for an ordinary web application, and two Iveri
+ * services are not ordinary.
  *
  * - **`conduit-api`'s product is raw webhook bytes.** The request body it is holding when
  *   something throws is a customer's payload from Meta or Stripe, and the URL it arrived on
@@ -48,6 +49,26 @@ export const scrubEvent = (event: ErrorEvent): ErrorEvent => {
         // An id identifies a row we own; the rest describes a person. `ip_address` is also what
         // moves a report into the scope of a data-protection question we have not answered.
         scrubbed.user = { id: event.user.id };
+    }
+
+    if (event.exception?.values) {
+        // A frame's local variables are the request body by another name — the password a login
+        // handler was holding, the webhook bytes a parser was walking. Collection is off; this
+        // keeps it that way if an integration is ever switched on without reading this file.
+        scrubbed.exception = {
+            ...event.exception,
+            values: event.exception.values.map((value) =>
+                value.stacktrace?.frames
+                    ? {
+                          ...value,
+                          stacktrace: {
+                              ...value.stacktrace,
+                              frames: value.stacktrace.frames.map(({ vars: _vars, ...frame }) => frame),
+                          },
+                      }
+                    : value,
+            ),
+        };
     }
 
     if (event.breadcrumbs) {

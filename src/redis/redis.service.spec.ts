@@ -1,4 +1,6 @@
-import { RedisService } from './redis.service';
+import { describe, expect, it } from 'vitest';
+
+import { RedisService } from './redis.service.js';
 
 /**
  * The no-URL path only.

@@ -1,11 +1,11 @@
 import { Injectable, type OnModuleInit } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
-import type { Gauge } from 'prom-client';
+import type { Gauge } from '@prometheus-io/client';
 import { DataSource } from 'typeorm';
 
-import type { MetricSource } from './metric-source.interface';
-import { DATABASE_POOL_GAUGE } from './metrics.constant';
-import { MetricsService } from './metrics.service';
+import type { MetricSource } from './metric-source.interface.js';
+import { DATABASE_POOL_GAUGE } from './metrics.constant.js';
+import { MetricsService } from './metrics.service.js';
 
 /** The three numbers `pg.Pool` keeps, duck-typed off the TypeORM driver. */
 interface PoolCounts {

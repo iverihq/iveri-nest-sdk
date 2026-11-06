@@ -1,7 +1,7 @@
 import type { UUID } from '@iveri/contracts';
 import type { FindOptionsWhere } from 'typeorm';
 
-import type { BaseEntity } from '../entity/base.entity';
+import type { BaseEntity } from '../entity/base.entity.js';
 
 /**
  * Forces `tenantId` onto every clause of a caller-supplied `where`.

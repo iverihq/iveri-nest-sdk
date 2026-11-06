@@ -1,7 +1,9 @@
-import type { MetricSource } from './metric-source.interface';
-import type { MetricsModuleOptions } from './metrics-module-options.interface';
-import { MetricsService } from './metrics.service';
-import type { QueueDepthCollector, QueueDepthReading } from './queue-depth-collector.interface';
+import { describe, expect, it } from 'vitest';
+
+import type { MetricSource } from './metric-source.interface.js';
+import type { MetricsModuleOptions } from './metrics-module-options.interface.js';
+import { MetricsService } from './metrics.service.js';
+import type { QueueDepthCollector, QueueDepthReading } from './queue-depth-collector.interface.js';
 
 const OPTIONS: MetricsModuleOptions = { serviceName: 'conduit-api', collectDefaultMetrics: false };
 
@@ -50,7 +52,7 @@ const samplesOf = (output: string, metric: string): string[] =>
 describe('MetricsService', () => {
     describe('registry isolation', () => {
         it('gives each instance its own registry', async () => {
-            // Against prom-client's global default registry the *second* instance would throw on
+            // Against the client's global default registry the *second* instance would throw on
             // construction with a duplicate-metric error, so every e2e suite that boots an app
             // twice would fail on import rather than on anything it was testing.
             const first = build();

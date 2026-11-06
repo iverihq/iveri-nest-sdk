@@ -1,11 +1,12 @@
 import { RequestMethod, VERSION_NEUTRAL } from '@nestjs/common';
 import { CONTROLLER_WATERMARK, HOST_METADATA, PATH_METADATA, VERSION_METADATA } from '@nestjs/common/constants';
+import { describe, expect, it, vi } from 'vitest';
 
-import { IS_PUBLIC_KEY } from '../auth/public.decorator';
+import { IS_PUBLIC_KEY } from '../auth/public.decorator.js';
 
-import type { HealthCheck } from './health-check.interface';
-import { HEALTH_ROUTE_EXCLUSIONS } from './health.constant';
-import { HealthController } from './health.controller';
+import type { HealthCheck } from './health-check.interface.js';
+import { HEALTH_ROUTE_EXCLUSIONS } from './health.constant.js';
+import { HealthController } from './health.controller.js';
 
 const buildController = (checks: HealthCheck[], startupChecks: HealthCheck[] = checks): HealthController =>
     new HealthController(checks, startupChecks);
@@ -68,7 +69,7 @@ describe('HealthController', () => {
     describe('live', () => {
         it('reports ok without consulting any dependency', () => {
             const check = failingCheck('database', 'connection refused');
-            const spy = jest.spyOn(check, 'check');
+            const spy = vi.spyOn(check, 'check');
 
             expect(buildController([check]).live()).toEqual({ status: 'ok' });
             expect(spy).not.toHaveBeenCalled();
@@ -119,7 +120,7 @@ describe('HealthController', () => {
 
         it('runs its own list, not the startup one', async () => {
             const startupOnly = failingCheck('migrations', 'not applied');
-            const spy = jest.spyOn(startupOnly, 'check');
+            const spy = vi.spyOn(startupOnly, 'check');
 
             await expect(buildController([passingCheck('database')], [startupOnly]).ready()).resolves.toMatchObject({
                 status: 'ready',
@@ -190,7 +191,7 @@ describe('HealthController', () => {
 
         it('stops calling the checks once latched', async () => {
             const check = passingCheck('database');
-            const spy = jest.spyOn(check, 'check');
+            const spy = vi.spyOn(check, 'check');
             const controller = buildController([], [check]);
 
             await controller.startup();

@@ -1,4 +1,6 @@
-import { nextOutboxAttemptAt } from './outbox-retry.util';
+import { describe, expect, it } from 'vitest';
+
+import { nextOutboxAttemptAt } from './outbox-retry.util.js';
 
 describe('nextOutboxAttemptAt', () => {
     it('never schedules in the past', () => {

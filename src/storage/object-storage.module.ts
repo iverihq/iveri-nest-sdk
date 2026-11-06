@@ -1,8 +1,8 @@
 import { type DynamicModule, type FactoryProvider, Module, type ModuleMetadata } from '@nestjs/common';
 
-import type { ObjectStorageModuleOptions } from './object-storage-module-options.interface';
-import { OBJECT_STORAGE_MODULE_OPTIONS } from './object-storage.constant';
-import { ObjectStorageService } from './object-storage.service';
+import type { ObjectStorageModuleOptions } from './object-storage-module-options.interface.js';
+import { OBJECT_STORAGE_MODULE_OPTIONS } from './object-storage.constant.js';
+import { ObjectStorageService } from './object-storage.service.js';
 
 /** How {@link ObjectStorageModule.forRootAsync} resolves its options. */
 export interface ObjectStorageModuleAsyncOptions extends Pick<ModuleMetadata, 'imports'> {

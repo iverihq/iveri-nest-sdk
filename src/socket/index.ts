@@ -1,1 +1,1 @@
-export * from './allowed-origin.util';
+export * from './allowed-origin.util.js';

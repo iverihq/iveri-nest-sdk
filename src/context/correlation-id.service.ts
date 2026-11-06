@@ -4,7 +4,7 @@ import { randomUUID } from 'node:crypto';
 import type { Maybe } from '@iveri/contracts';
 import { Injectable } from '@nestjs/common';
 
-import type { CorrelationContext } from './correlation-context.interface';
+import type { CorrelationContext } from './correlation-context.interface.js';
 
 /**
  * Owns the ambient correlation context.

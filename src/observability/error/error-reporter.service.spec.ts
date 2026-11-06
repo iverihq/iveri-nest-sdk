@@ -1,7 +1,8 @@
 import { Logger } from '@nestjs/common';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import type { ErrorReporterModuleOptions } from './error-reporter-module-options.interface';
-import { ErrorReporterService } from './error-reporter.service';
+import type { ErrorReporterModuleOptions } from './error-reporter-module-options.interface.js';
+import { ErrorReporterService } from './error-reporter.service.js';
 
 const OPTIONS: ErrorReporterModuleOptions = { environment: 'local', serviceName: 'conduit-api' };
 

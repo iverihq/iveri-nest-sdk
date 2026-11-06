@@ -1,9 +1,10 @@
 import type { UUID } from '@iveri/contracts';
 import type { FindOptionsWhere } from 'typeorm';
+import { describe, expect, it } from 'vitest';
 
-import type { BaseEntity } from '../entity/base.entity';
+import type { BaseEntity } from '../entity/base.entity.js';
 
-import { scopeWhereToTenant, stripManagedColumns } from './tenant-scope.util';
+import { scopeWhereToTenant, stripManagedColumns } from './tenant-scope.util.js';
 
 interface ConversationEntity extends BaseEntity {
     contactId: UUID;

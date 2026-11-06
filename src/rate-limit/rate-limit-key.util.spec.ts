@@ -1,4 +1,6 @@
-import { buildRateLimitKey, hashRateLimitIdentifier } from './rate-limit-key.util';
+import { describe, expect, it } from 'vitest';
+
+import { buildRateLimitKey, hashRateLimitIdentifier } from './rate-limit-key.util.js';
 
 describe('buildRateLimitKey', () => {
     it('leads with the service namespace and the limiter entity', () => {

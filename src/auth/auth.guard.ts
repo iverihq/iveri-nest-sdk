@@ -3,13 +3,13 @@ import { type CanActivate, type ExecutionContext, Injectable } from '@nestjs/com
 import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
 
-import { HeaderKey } from '../constant/header-key.constant';
-import { REQUEST_CONTEXT_PROPERTY } from '../context/current-request-context.decorator';
-import { UnauthenticatedException } from '../exception/unauthenticated.exception';
+import { HeaderKey } from '../constant/header-key.constant.js';
+import { REQUEST_CONTEXT_PROPERTY } from '../context/current-request-context.decorator.js';
+import { UnauthenticatedException } from '../exception/unauthenticated.exception.js';
 
-import { AccessTokenService } from './access-token.service';
-import type { AuthenticatedRequestContext } from './authenticated-request-context.interface';
-import { IS_PUBLIC_KEY } from './public.decorator';
+import { AccessTokenService } from './access-token.service.js';
+import type { AuthenticatedRequestContext } from './authenticated-request-context.interface.js';
+import { IS_PUBLIC_KEY } from './public.decorator.js';
 
 /** RFC 7235 makes the scheme case-insensitive, and clients genuinely send `bearer`. */
 const BEARER_SCHEME = 'bearer';

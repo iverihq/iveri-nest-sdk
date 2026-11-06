@@ -1,8 +1,10 @@
 import type { HttpService } from '@nestjs/axios';
 import { of, throwError } from 'rxjs';
+import { describe, expect, it, vi } from 'vitest';
+import type { Mock } from 'vitest';
 
-import type { ServiceTokenModuleOptions } from './service-token-module-options.interface';
-import { ServiceTokenService } from './service-token.service';
+import type { ServiceTokenModuleOptions } from './service-token-module-options.interface.js';
+import { ServiceTokenService } from './service-token.service.js';
 
 const OPTIONS: ServiceTokenModuleOptions = {
     identityApiUrl: 'http://identity.internal:3000',
@@ -13,7 +15,7 @@ const OPTIONS: ServiceTokenModuleOptions = {
 
 const ok = (body: unknown) => of({ status: 200, data: body } as never);
 
-const serviceWith = (request: jest.Mock, overrides: Partial<ServiceTokenModuleOptions> = {}): ServiceTokenService =>
+const serviceWith = (request: Mock, overrides: Partial<ServiceTokenModuleOptions> = {}): ServiceTokenService =>
     new ServiceTokenService({ ...OPTIONS, ...overrides }, { request } as unknown as HttpService);
 
 describe('ServiceTokenService', () => {
@@ -26,7 +28,7 @@ describe('ServiceTokenService', () => {
      * deliberately rate limited per account.
      */
     it('makes one exchange for callers that arrive together', async () => {
-        const request = jest.fn().mockReturnValue(ok({ accessToken: 'jwt', expiresInSeconds: 900 }));
+        const request = vi.fn().mockReturnValue(ok({ accessToken: 'jwt', expiresInSeconds: 900 }));
         const service = serviceWith(request);
 
         const tokens = await Promise.all(Array.from({ length: 8 }, () => service.getAccessToken()));
@@ -36,7 +38,7 @@ describe('ServiceTokenService', () => {
     });
 
     it('reuses the cached token until the skew window', async () => {
-        const request = jest.fn().mockReturnValue(ok({ accessToken: 'jwt', expiresInSeconds: 900 }));
+        const request = vi.fn().mockReturnValue(ok({ accessToken: 'jwt', expiresInSeconds: 900 }));
         const service = serviceWith(request);
 
         await service.getAccessToken();
@@ -50,7 +52,7 @@ describe('ServiceTokenService', () => {
      * flight — the far end's answer to that is a 401 on work that was fine.
      */
     it('replaces a token already inside the skew window', async () => {
-        const request = jest.fn().mockReturnValue(ok({ accessToken: 'jwt', expiresInSeconds: 20 }));
+        const request = vi.fn().mockReturnValue(ok({ accessToken: 'jwt', expiresInSeconds: 20 }));
         const service = serviceWith(request);
 
         await service.getAccessToken();
@@ -60,7 +62,7 @@ describe('ServiceTokenService', () => {
     });
 
     it('exchanges again after the cache is invalidated', async () => {
-        const request = jest.fn().mockReturnValue(ok({ accessToken: 'jwt', expiresInSeconds: 900 }));
+        const request = vi.fn().mockReturnValue(ok({ accessToken: 'jwt', expiresInSeconds: 900 }));
         const service = serviceWith(request);
 
         await service.getAccessToken();
@@ -76,7 +78,7 @@ describe('ServiceTokenService', () => {
      * the service would never recover without a restart.
      */
     it('retries after a failure rather than caching it', async () => {
-        const request = jest
+        const request = vi
             .fn()
             .mockReturnValueOnce(throwError(() => new Error('ECONNREFUSED')))
             .mockReturnValue(ok({ accessToken: 'jwt', expiresInSeconds: 900 }));
@@ -87,7 +89,7 @@ describe('ServiceTokenService', () => {
     });
 
     it('reports a refusal with its status and nothing else', async () => {
-        const request = jest.fn().mockReturnValue(of({ status: 403, data: { message: 'ik_live_example rejected' } }));
+        const request = vi.fn().mockReturnValue(of({ status: 403, data: { message: 'ik_live_example rejected' } }));
 
         // The response body can quote the credential back; the caller gets the status, which is
         // the whole diagnosis — 401 is a wrong or revoked key, 403 one missing a permission.
@@ -108,7 +110,7 @@ describe('ServiceTokenService', () => {
         ['no expiry', { accessToken: 'jwt' }],
         ['an expiry of zero', { accessToken: 'jwt', expiresInSeconds: 0 }],
     ])('refuses a 2xx carrying %s', async (_label, body) => {
-        await expect(serviceWith(jest.fn().mockReturnValue(ok(body))).getAccessToken()).rejects.toThrow(
+        await expect(serviceWith(vi.fn().mockReturnValue(ok(body))).getAccessToken()).rejects.toThrow(
             /Service token response/,
         );
     });
@@ -121,7 +123,7 @@ describe('ServiceTokenService', () => {
          * dead-lettering a row for it.
          */
         it('says so rather than making a request', async () => {
-            const request = jest.fn();
+            const request = vi.fn();
             const service = serviceWith(request, { identityApiKey: undefined });
 
             expect(service.isConfigured()).toBe(false);
@@ -130,12 +132,12 @@ describe('ServiceTokenService', () => {
         });
 
         it('is configured when both halves are present', () => {
-            expect(serviceWith(jest.fn()).isConfigured()).toBe(true);
+            expect(serviceWith(vi.fn()).isConfigured()).toBe(true);
         });
     });
 
     it('tolerates a trailing slash on the identity URL', async () => {
-        const request = jest.fn().mockReturnValue(ok({ accessToken: 'jwt', expiresInSeconds: 900 }));
+        const request = vi.fn().mockReturnValue(ok({ accessToken: 'jwt', expiresInSeconds: 900 }));
 
         await serviceWith(request, { identityApiUrl: 'http://identity.internal:3000//' }).getAccessToken();
 

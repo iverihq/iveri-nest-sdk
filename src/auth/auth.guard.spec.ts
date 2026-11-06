@@ -2,15 +2,16 @@ import { UserPermission, type UUID } from '@iveri/contracts';
 import { type AccessTokenPayload, PrincipalType } from '@iveri/contracts/identity';
 import type { ExecutionContext } from '@nestjs/common';
 import type { Reflector } from '@nestjs/core';
+import { describe, expect, it, vi } from 'vitest';
 
-import { HeaderKey } from '../constant/header-key.constant';
-import { REQUEST_CONTEXT_PROPERTY } from '../context/current-request-context.decorator';
-import { UnauthenticatedException } from '../exception/unauthenticated.exception';
+import { HeaderKey } from '../constant/header-key.constant.js';
+import { REQUEST_CONTEXT_PROPERTY } from '../context/current-request-context.decorator.js';
+import { UnauthenticatedException } from '../exception/unauthenticated.exception.js';
 
-import type { AccessTokenService } from './access-token.service';
-import { AuthGuard } from './auth.guard';
-import type { AuthenticatedRequestContext } from './authenticated-request-context.interface';
-import { IS_PUBLIC_KEY } from './public.decorator';
+import type { AccessTokenService } from './access-token.service.js';
+import { AuthGuard } from './auth.guard.js';
+import type { AuthenticatedRequestContext } from './authenticated-request-context.interface.js';
+import { IS_PUBLIC_KEY } from './public.decorator.js';
 
 const USER_ID = 'aaaaaaaa-0000-4000-8000-000000000001' as UUID;
 const API_KEY_ID = 'bbbbbbbb-0000-4000-8000-000000000002' as UUID;
@@ -41,7 +42,7 @@ const buildHarness = (options: { headers?: Record<string, string>; isPublic?: bo
         getAllAndOverride: (key: string) => (key === IS_PUBLIC_KEY ? options.isPublic : undefined),
     } as unknown as Reflector;
 
-    const verify = jest.fn<Promise<AccessTokenPayload>, [string]>().mockResolvedValue(buildPayload());
+    const verify = vi.fn<(...args: [string]) => Promise<AccessTokenPayload>>().mockResolvedValue(buildPayload());
     const accessTokenService = { verify } as unknown as AccessTokenService;
 
     return { guard: new AuthGuard(reflector, accessTokenService), context, request, verify };

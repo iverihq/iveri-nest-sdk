@@ -2,14 +2,14 @@ import type { Nullable } from '@iveri/contracts';
 import { Inject, Injectable, Logger, type OnApplicationShutdown } from '@nestjs/common';
 import { Redis } from 'ioredis';
 
-import type { RedisModuleOptions } from './redis-module-options.interface';
+import type { RedisModuleOptions } from './redis-module-options.interface.js';
 import {
     REDIS_CONNECT_TIMEOUT_MS,
     REDIS_DEFAULT_COMMAND_TIMEOUT_MS,
     REDIS_ERROR_LOG_INTERVAL_MS,
     REDIS_MODULE_OPTIONS,
     REDIS_RECONNECT_MAX_DELAY_MS,
-} from './redis.constant';
+} from './redis.constant.js';
 
 /**
  * Owns the one Redis connection a process holds.

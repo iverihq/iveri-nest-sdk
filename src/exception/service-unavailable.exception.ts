@@ -1,7 +1,7 @@
 import { ErrorCode } from '@iveri/contracts';
 import { HttpStatus } from '@nestjs/common';
 
-import { DomainException } from './domain.exception';
+import { DomainException } from './domain.exception.js';
 
 /** A dependency is unreachable, or the process is draining for shutdown. Retryable. */
 export class ServiceUnavailableException extends DomainException {

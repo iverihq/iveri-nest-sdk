@@ -1,4 +1,6 @@
-import { HeaderKey } from '../../constant/header-key.constant';
+import type { NodeOptions } from '@sentry/node';
+
+import { HeaderKey } from '../../constant/header-key.constant.js';
 
 /** Injection token for the resolved {@link ErrorReporterModuleOptions}. */
 export const ERROR_REPORTER_MODULE_OPTIONS = Symbol('ERROR_REPORTER_MODULE_OPTIONS');
@@ -22,6 +24,35 @@ export const REPORTABLE_HEADER_NAMES: readonly string[] = [
     HeaderKey.CORRELATION_ID,
     HeaderKey.USER_AGENT,
 ];
+
+/**
+ * What the Sentry SDK may collect by itself, before `scrubEvent` ever sees the event.
+ *
+ * Sentry 11 replaced `sendDefaultPii` with one setting per category, and **every category
+ * defaults to on** — request and response bodies, cookies, headers, query strings, database
+ * query parameters among them. Each is named here and switched off, which keeps the data out of
+ * the event in the first place; `scrubEvent` stays as the second line, for whatever arrives by a
+ * route nobody configured.
+ *
+ * Typed `Required` so that a category a later Sentry release adds **fails the build here**
+ * until someone decides whether it is safe, rather than shipping switched on.
+ */
+export const DATA_COLLECTION: Required<NonNullable<NodeOptions['dataCollection']>> = {
+    userInfo: false,
+    cookies: false,
+    // The same allowlist `scrubEvent` applies, so the two can never disagree about a header.
+    httpHeaders: { request: { allow: [...REPORTABLE_HEADER_NAMES] }, response: false },
+    httpBodies: [],
+    urlQueryParams: false,
+    graphQL: { document: false, variables: false },
+    genAI: { inputs: false, outputs: false },
+    mcp: { inputs: false, outputs: false },
+    databaseQueryData: false,
+    queues: false,
+    stackFrameVariables: false,
+    // Lines of our own source around each frame: the diagnosis, and nothing a request put there.
+    frameContextLines: 5,
+};
 
 /**
  * Property names whose **values** are replaced wherever they appear in structured context.

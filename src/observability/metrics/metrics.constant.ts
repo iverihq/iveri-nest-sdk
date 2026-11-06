@@ -1,7 +1,7 @@
 import { RequestMethod } from '@nestjs/common';
-import type { RouteInfo } from '@nestjs/common/interfaces';
+import type { RouteInfo } from '@nestjs/common/interfaces/index.js';
 
-import { INFRASTRUCTURE_ROUTE_PREFIXES } from '../../constant/infrastructure-route.constant';
+import { INFRASTRUCTURE_ROUTE_PREFIXES } from '../../constant/infrastructure-route.constant.js';
 
 /** Path the Prometheus scrape endpoint is mounted on. */
 export const METRICS_ROUTE_PATH = 'metrics';

@@ -1,7 +1,7 @@
 import { ErrorCode } from '@iveri/contracts';
 import { HttpStatus } from '@nestjs/common';
 
-import { DomainException } from './domain.exception';
+import { DomainException } from './domain.exception.js';
 
 /** The request contradicts current state — a stale version, a closed aggregate, a used token. */
 export class ResourceConflictException extends DomainException {

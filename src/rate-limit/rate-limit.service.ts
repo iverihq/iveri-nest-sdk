@@ -1,17 +1,17 @@
 import type { Maybe } from '@iveri/contracts';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 
-import { RedisService } from '../redis/redis.service';
+import { RedisService } from '../redis/redis.service.js';
 
-import type { RateLimitDecision } from './rate-limit-decision.interface';
-import { buildRateLimitKey } from './rate-limit-key.util';
-import type { RateLimitModuleOptions } from './rate-limit-module-options.interface';
-import type { RateLimitPolicy } from './rate-limit-policy.interface';
-import { RATE_LIMIT_DEFAULT_COST, RATE_LIMIT_MODULE_OPTIONS } from './rate-limit.constant';
+import type { RateLimitDecision } from './rate-limit-decision.interface.js';
+import { buildRateLimitKey } from './rate-limit-key.util.js';
+import type { RateLimitModuleOptions } from './rate-limit-module-options.interface.js';
+import type { RateLimitPolicy } from './rate-limit-policy.interface.js';
+import { RATE_LIMIT_DEFAULT_COST, RATE_LIMIT_MODULE_OPTIONS } from './rate-limit.constant.js';
 // Declaration merging for the custom command registered below. Side-effect import: the file
 // emits no runtime code, and without it `iveriTokenBucket` is not on the client's type.
-import './token-bucket-command.type';
-import { TOKEN_BUCKET_COMMAND, TOKEN_BUCKET_SCRIPT } from './token-bucket.constant';
+import './token-bucket-command.type.js';
+import { TOKEN_BUCKET_COMMAND, TOKEN_BUCKET_SCRIPT } from './token-bucket.constant.js';
 
 /** Milliseconds in a minute, for converting a per-minute policy into the script's refill rate. */
 const MS_PER_MINUTE = 60_000;

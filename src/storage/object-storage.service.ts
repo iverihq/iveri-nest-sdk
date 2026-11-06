@@ -1,8 +1,8 @@
 import { DeleteObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { Inject, Injectable, ServiceUnavailableException } from '@nestjs/common';
 
-import type { ObjectStorageModuleOptions } from './object-storage-module-options.interface';
-import { OBJECT_STORAGE_MODULE_OPTIONS } from './object-storage.constant';
+import type { ObjectStorageModuleOptions } from './object-storage-module-options.interface.js';
+import { OBJECT_STORAGE_MODULE_OPTIONS } from './object-storage.constant.js';
 
 /**
  * Writes and removes objects in one service's own bucket.

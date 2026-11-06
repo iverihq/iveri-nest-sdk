@@ -1,14 +1,13 @@
 import { randomUUID } from 'node:crypto';
 
 import type { UUID } from '@iveri/contracts';
-import type { DataSource, EntityTarget, FindOptionsWhere, ObjectLiteral } from 'typeorm';
-import type { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity';
+import type { DataSource, EntityTarget, FindOptionsWhere, ObjectLiteral, QueryDeepPartialEntity } from 'typeorm';
 
-import type { QueueDepthCollector, QueueDepthReading } from '../observability';
-import { BaseRepository } from '../repository';
+import type { QueueDepthCollector, QueueDepthReading } from '../observability/index.js';
+import { BaseRepository } from '../repository/index.js';
 
-import { OutboxEventStatus } from './outbox-event-status.enum';
-import type { OutboxEventEntity } from './outbox-event.entity';
+import { OutboxEventStatus } from './outbox-event-status.enum.js';
+import type { OutboxEventEntity } from './outbox-event.entity.js';
 
 /**
  * Claim, complete and retry for one outbox table.

@@ -1,8 +1,8 @@
 import type { UUID } from '@iveri/contracts';
 
-import { OutboxEventStatus } from './outbox-event-status.enum';
-import type { OutboxEventEntity } from './outbox-event.entity';
-import { nextOutboxAttemptAt } from './outbox-retry.util';
+import { OutboxEventStatus } from './outbox-event-status.enum.js';
+import type { OutboxEventEntity } from './outbox-event.entity.js';
+import { nextOutboxAttemptAt } from './outbox-retry.util.js';
 
 /** The knobs a service reads from its own validated environment. */
 export interface OutboxProcessorConfig {
