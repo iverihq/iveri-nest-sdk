@@ -4,6 +4,30 @@ The NestJS plumbing every Iveri service shares: request context, authentication 
 authorization, typed exceptions, tenant-scoped persistence, config validation, health endpoints,
 Redis, rate limiting, metrics and error reporting.
 
+Release `0.25.0` is **native ESM** (`"type": "module"`, compiled under `nodenext`) and moves
+every peer to what the fleet runs:
+
+| Peer                    | Range     | Note                                                          |
+| ----------------------- | --------- | ------------------------------------------------------------- |
+| `@nestjs/*`             | `^12.0.0` | NestJS 11 dropped                                             |
+| `typeorm`               | `^1.1.0`  |                                                               |
+| `ioredis`               | `^6.0.0`  |                                                               |
+| `@sentry/node`          | `^11.0.0` | see _Error reporting_ — `sendDefaultPii` is gone              |
+| `class-validator`       | `^0.15.0` |                                                               |
+| `@prometheus-io/client` | `^0.16.0` | **replaces `prom-client`**, which npm marks as replaced by it |
+
+Every entry point offers exactly `types` and `default`; `typesVersions` is gone, so a consumer
+compiles with `moduleResolution: nodenext`. Node 26 still `require`s the build. Three changes
+of substance ride along:
+
+- **`@iveri/nest-sdk/e2e`** — the Testcontainers harness twelve services each carried a copy
+  of. See its section below.
+- **`GlobalExceptionFilter` never answers with an empty correlation id.** An error escaping
+  before `CorrelationIdMiddleware` ran used to carry `""`; the filter now mints an id and writes
+  it onto the response header, so body, header and log line agree.
+- **Sentry's own collection is switched off category by category** (`DATA_COLLECTION`), and
+  `scrubEvent` now also strips stack-frame local variables.
+
 Release `0.17.1` fixes the HTTP middleware reading `request.path`. Nest mounts middleware per
 matched route, so Express reports `path` as `/` and puts the real path in `baseUrl` — the
 ignored-route check therefore matched nothing and the scrape endpoint counted its own scrapes.
@@ -54,7 +78,8 @@ registry permission contract used by `unibox-ai`.
 pnpm add @iveri/nest-sdk @iveri/contracts
 ```
 
-Import from the root barrel only — never `@iveri/nest-sdk/dist/...`.
+Import from an entry point only — the root, `/e2e`, `/service-token`, `/storage` or `/testing` —
+never `@iveri/nest-sdk/dist/...`.
 
 ```ts
 import { BaseEntity, BaseRepository, GlobalExceptionFilter, RequestContext, validateEnv } from '@iveri/nest-sdk';
@@ -163,7 +188,8 @@ export class AppModule implements NestModule {
 ```
 
 It echoes an incoming `x-correlation-id` and mints one otherwise, and writes it onto the
-response.
+response. `GlobalExceptionFilter` does the same for an error that escapes before the middleware
+ran, so no response carries an empty id.
 
 **`RequestContext`** is explicit. It carries `tenantId`, `userId`, `permissions`, `locale` and
 `correlationId`, is built once at the edge from the authenticated principal, and is threaded
@@ -445,7 +471,7 @@ a metrics system is normally ruined:
 ### Domain metrics
 
 A feature registers its own metrics through `MetricsService` rather than importing
-`prom-client`, so ten services do not each register into a registry slightly differently:
+`@prometheus-io/client`, so ten services do not each register into a registry slightly differently:
 
 ```ts
 @Injectable()
@@ -547,13 +573,18 @@ and the system saying so correctly, and capturing all sixteen typed domain excep
 one real bug under a week of validation failures. Health and metrics routes are excluded too — a
 readiness probe answers 503 for as long as a dependency is down.
 
-Everything leaving the process goes through `scrubEvent`, which is the entire safety case for
-sending errors off the machine. The request is reduced to its **method** and an **allowlist** of
+**Sentry 11 collects every category of request data by default** — bodies, cookies, headers,
+query strings, database query parameters. `DATA_COLLECTION` names each category and switches it
+off, typed `Required` so a category a later release adds fails the build until somebody decides
+about it. Everything that still leaves the process goes through `scrubEvent`, the second line of
+the safety case for sending errors off the machine. The request is reduced to its **method** and an **allowlist** of
 headers; the body, the URL, the query string and the cookies are dropped. That is not
 over-caution: `conduit-api` is holding a customer's Meta or Stripe payload when it throws, its
 ingress URL contains the credential authorising posts to that endpoint, and
 `iveri-identity-api` handles passwords and refresh tokens on exactly the routes most likely to
-fail. Values under keys naming a secret are redacted recursively, to a bounded depth.
+fail. Values under keys naming a secret are redacted recursively, to a bounded depth, and every
+stack frame's local variables are dropped — a login handler's frame holds the password it was
+checking.
 
 Tenant ids **are** tagged on an error report while being forbidden as a metric label. That looks
 inconsistent and is not: a Prometheus label is a stored time series and an unauthenticated
@@ -785,15 +816,37 @@ Two allowances are deliberate, and both are pinned by specs:
   for both surfaces beats a stricter default that holds for only one of them — a socket that
   refused everything while the HTTP routes accepted everything would read as a bug in the socket.
 
+## `@iveri/nest-sdk/e2e` — one harness for every service's suite
+
+Twelve services each carried a near-identical `global-setup.ts`, `container-holder.ts` and
+`truncateAllTables`, and they had already drifted: only one kept PostGIS's `spatial_ref_sys` out
+of the truncation, the lesson that cost `iveri-mobility-api` a day. Now a service's Vitest
+`globalSetup` is one line:
+
+```ts
+// test/helper/global-setup.ts
+import { e2eGlobalSetup } from '@iveri/nest-sdk/e2e';
+
+import { MIGRATIONS } from '../../src/database/db-migration/index.js';
+
+export default e2eGlobalSetup({ database: 'taxi_test', migrations: MIGRATIONS, redis: true });
+```
+
+It starts one throwaway Postgres (`E2E_POSTGIS_IMAGE` for a PostGIS service), applies the
+service's **real migrations** to it — never `synchronize`, which would build the schema the
+migrations may have drifted from — starts a Redis when asked, and stops both when the run ends.
+Workers read the URLs with `e2eDatabaseUrl()` / `e2eRedisUrl()`, which use Vitest's
+`provide`/`inject` and **throw** when nothing provided them: a suite booting against whatever
+`DATABASE_URL` the shell held would be running against the developer's own database.
+`truncateAllTables(dataSource)` empties every table but the migration ledger and
+`spatial_ref_sys`.
+
+**Its own entry point, with optional peers** (`vitest`, `@testcontainers/postgresql`,
+`@testcontainers/redis`), so a service with no e2e suite installs none of them. Redis's module is
+imported only when `redis: true`.
+
 ## What is deliberately not here yet
 
-`outbox/`, `inbox/`, `lock/`, `http/`, `pagination/` and `swagger/` are in
-the plan and unwritten. Per the second-consumer rule, they get written in the service that
-first needs them and are pushed down here once proven by real use. Nothing is extracted in
-anticipation.
-
-`outbox/` is the interesting one: Conduit gateway mode (build-order step 4) wrote a
-**specialised** queue rather than the generic module — its rows carry a target URL, an attempt
-budget and a next-attempt time, which are the columns its indexes and its DLQ view depend on.
-That table is now the reference for what the generic claim/retry/dead-letter machinery should
-look like here, once a service publishes a real cross-service event.
+`inbox/`, `lock/`, `http/` and `pagination/` are in the plan and unwritten. Per the
+second-consumer rule, they get written in the service that first needs them and are pushed down
+here once proven by real use. Nothing is extracted in anticipation.
