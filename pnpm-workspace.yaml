@@ -4,3 +4,28 @@ allowBuilds:
   # Install-time telemetry, reached through `@nestjs/swagger` → `swagger-ui-dist`. Nothing in the
   # package needs it to run.
   '@scarf/scarf': false
+  # Optional native speed-ups for SSH, reached through Testcontainers → `docker-modem` in the e2e
+  # harness. Both fall back to JavaScript.
+  cpu-features: false
+  ssh2: false
+  # A post-install notice about protobuf's CLI, reached through Sentry's OpenTelemetry. Nothing runs
+  # without it.
+  protobufjs: false
+
+# pnpm 12 holds back any version published in the last day, a defence against a compromised
+# release of a package somebody else publishes. Our own packages are released from this
+# organization's CI and installed by the next repository minutes later, so only they are exempt.
+minimumReleaseAgeExclude:
+  - '@iveri/*'
+  # Exact versions only, so nothing published later is exempt; remove each once it is a day old.
+  # This one: 2026-11-06 19:51 UTC.
+  - '@aws-sdk/client-s3@3.1163.0'
+  # The NestJS releases of 2026-11-06, which the whole fleet has run since the NestJS 12 move
+  # installed them under pnpm 9. A day old at 2026-11-07 10:25 UTC.
+  - '@nestjs/common@12.4.0'
+  - '@nestjs/config@12.1.1'
+  - '@nestjs/core@12.4.0'
+  - '@nestjs/jwt@12.0.4'
+  - '@nestjs/swagger@12.1.1'
+  - '@nestjs/testing@12.4.0'
+  - '@nestjs/typeorm@12.0.3'
