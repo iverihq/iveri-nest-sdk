@@ -13,3 +13,4 @@ export * from './redis/index.js';
 export * from './repository/index.js';
 export * from './socket/index.js';
 export * from './swagger/index.js';
+export * from './validation/index.js';
