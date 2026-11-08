@@ -834,6 +834,20 @@ Two allowances are deliberate, and both are pinned by specs:
   for both surfaces beats a stricter default that holds for only one of them — a socket that
   refused everything while the HTTP routes accepted everything would read as a bug in the socket.
 
+## `validation/` — a field that may be left out and may not be null
+
+```ts
+@ApiPropertyOptional()
+@IsOmittable()
+@IsString()
+name?: string;
+```
+
+`@IsOptional()` passes `null` as well as an absent value, so on a column that cannot hold one a
+body of `{ "name": null }` clears validation, reaches the database and comes back as a 500.
+`@IsOmittable()` skips the other validators only when the field is absent. **`@IsOptional()` stays
+right where `null` means "clear this"**, and where the service reads the value through a `??`.
+
 ## `@iveri/nest-sdk/e2e` — one harness for every service's suite
 
 Twelve services each carried a near-identical `global-setup.ts`, `container-holder.ts` and
