@@ -1,4 +1,4 @@
-import { DeleteObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { Inject, Injectable, ServiceUnavailableException } from '@nestjs/common';
 
 import type { ObjectStorageModuleOptions } from './object-storage-module-options.interface.js';
@@ -61,6 +61,29 @@ export class ObjectStorageService {
         } catch {
             // The provider's message can name the bucket and the key, and a key is often a
             // tenant's id — so the caller gets the fact rather than the detail.
+            throw new ServiceUnavailableException('Object storage is unavailable');
+        }
+    }
+
+    /**
+     * Reads one object back, or `null` when nothing is at that key.
+     *
+     * For a private object that a service hands out after checking who is asking, which is why a
+     * caller gets the bytes rather than a signed address that anybody holding it could open.
+     */
+    async read(key: string): Promise<{ bytes: Buffer; contentType: string | undefined } | null> {
+        try {
+            const result = await this.client.send(new GetObjectCommand({ Bucket: this.options.bucket, Key: key }), {
+                abortSignal: AbortSignal.timeout(this.options.timeoutMs),
+            });
+            const bytes = await result.Body?.transformToByteArray();
+
+            return bytes === undefined ? null : { bytes: Buffer.from(bytes), contentType: result.ContentType };
+        } catch (error: unknown) {
+            if ((error as { name?: string }).name === 'NoSuchKey') {
+                return null;
+            }
+
             throw new ServiceUnavailableException('Object storage is unavailable');
         }
     }
