@@ -54,6 +54,30 @@ describe('ObjectStorageService', () => {
         await expect(serviceWith(vi.fn().mockResolvedValue({})).remove('k')).resolves.toBe(true);
     });
 
+    it('reads an object back with its content type', async () => {
+        const send = vi.fn().mockResolvedValue({
+            Body: { transformToByteArray: () => Promise.resolve(Uint8Array.from([1, 2, 3])) },
+            ContentType: 'application/pdf',
+        });
+
+        await expect(serviceWith(send).read('k')).resolves.toEqual({
+            bytes: Buffer.from([1, 2, 3]),
+            contentType: 'application/pdf',
+        });
+    });
+
+    it('answers null for an object that is not there', async () => {
+        const send = vi.fn().mockRejectedValue(Object.assign(new Error('gone'), { name: 'NoSuchKey' }));
+
+        await expect(serviceWith(send).read('k')).resolves.toBeNull();
+    });
+
+    it('reports a failed read as unavailable, without the provider’s message', async () => {
+        const send = vi.fn().mockRejectedValue(new Error('AccessDenied: tenant-4f2b/contract.pdf'));
+
+        await expect(serviceWith(send).read('k')).rejects.toThrow('Object storage is unavailable');
+    });
+
     it('sends the caller’s content type and cache control', async () => {
         const send = vi.fn().mockResolvedValue({});
 
