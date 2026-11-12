@@ -337,6 +337,15 @@ authentication and authorization so a caller hammering a route they lack permiss
 down rather than merely refused. A module that registered its own `APP_GUARD` would take that
 decision away and hide it.
 
+### `PlatformWorkspaceGuard` — routes only Iveri's operators may use
+
+A route that reads or changes other companies' data needs a `platform:*` permission **and** a token issued in Iveri's
+operator workspace, which the service knows as `PLATFORM_TENANT_ID` (validated at startup, read through its own
+`ConfigService`). Put the guard on the controller with `@UseGuards(PlatformWorkspaceGuard)`, so it runs after the global
+guards: no token is a 401, a missing permission is a 403 from `PermissionGuard`, and the right permission from any other
+workspace is a 403 from this guard. Unset, every such route is refused. Identity and billing wrote it first; the
+product backoffices are why it lives here.
+
 ### Why it lives here, and what stayed behind
 
 Extracted when `unibox-api` became the **third** consumer. `conduit-api` was the second and it was
