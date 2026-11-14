@@ -80,7 +80,7 @@ registry permission contract used by `unibox-ai`.
 pnpm add @iveri/nest-sdk @iveri/contracts
 ```
 
-Import from an entry point only — the root, `/e2e`, `/service-token`, `/storage` or `/testing` —
+Import from an entry point only — the root, `/e2e`, `/licence`, `/service-token`, `/storage` or `/testing` —
 never `@iveri/nest-sdk/dist/...`.
 
 ```ts
@@ -744,6 +744,47 @@ second consumer appeared.
 **An absent credential is a supported state.** `isConfigured()` is how a service whose outbound
 work sits behind a feature flag refuses to arm a processor that could only ever fail, rather than
 discovering the gap on the first attempt and dead-lettering a row for it.
+
+## `@iveri/nest-sdk/licence` — whether a company may use this product
+
+```ts
+LicenceModule.forRootAsync({
+    inject: [ConfigService],
+    useFactory: (configService: ConfigService<AppEnvConfig, true>) => ({
+        product: IveriProduct.HR,
+        isEnabled: configService.get('HR_LICENCE_CHECK_ENABLED', { infer: true }) === true,
+        billingApiUrl: configService.get('BILLING_API_URL', { infer: true }),
+        billingTimeoutMs: configService.get('BILLING_TIMEOUT_MS', { infer: true }),
+        cacheSeconds: configService.get('HR_LICENCE_CACHE_SECONDS', { infer: true }),
+        identityApiUrl: configService.get('IDENTITY_API_URL', { infer: true }),
+        platformApiKey: configService.get('PLATFORM_API_KEY', { infer: true }),
+        identityTimeoutMs: configService.get('IDENTITY_TIMEOUT_MS', { infer: true }),
+        refreshSkewSeconds: configService.get('SERVICE_TOKEN_REFRESH_SKEW_SECONDS', { infer: true }),
+    }),
+});
+
+// providers, after AuthGuard and PermissionGuard:
+{ provide: APP_GUARD, useClass: LicenceGuard },
+```
+
+Asks `iveri-billing-api`'s `GET /platform/licences/check` whether a company's licence for **the configured product**
+is live. Extracted from `hr-api`, the first product that enforced, before seven more products copied it. It needs
+`@iveri/contracts` 0.92 or later, which carries `@iveri/contracts/platform`.
+
+- **`LicenceGuard`** refuses every signed-in route of a lapsed company with a 403 whose `details` are
+  `{ reason: 'licence-inactive', product }`, the product being the module's. It leaves `@Public()` routes alone (a
+  public page must check `isActive` itself and answer 404, so it does not say which companies lapsed), routes marked
+  **`@SkipLicence()`** (the backoffice, whose caller is Iveri's operator workspace), non-HTTP contexts and requests no
+  token reached.
+- **`LicenceService`** has `isEnabled()`, `isActive()`, `assertActive()` and `check(tenantId)`, which returns the
+  remembered `ProductLicenceCheck` or `null`. **Seat counting stays in the product**: what a seat is (an employee not
+  yet left, a specialist, a driver) is the product's own question, so it reads `check()?.seats` and counts itself.
+- **It fails open and never throws on billing's behalf.** An unknown answer lets the company through and is remembered
+  for at most ten seconds; a known one for `cacheSeconds`. One retry past a 401, and an answer naming another company or
+  another product is refused.
+- **Its own `ServiceTokenService`**, built from `platformApiKey` in Iveri's operator workspace, with its own cache. The
+  product's company key can never hold `platform:licence:check`, and a different key means a different cache.
+- **Its own entry point** for the reason `/service-token` has one: `@nestjs/axios` and `axios` are optional peers.
 
 ## `outbox/` — claim, publish, retry, dead-letter
 
