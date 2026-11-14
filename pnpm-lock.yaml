@@ -170,8 +170,8 @@ importers:
         specifier: ^3.1163.0
         version: 3.1163.0
       '@iveri/contracts':
-        specifier: ^0.39.0
-        version: 0.39.0
+        specifier: ^0.97.0
+        version: 0.97.0
       '@iveri/eslint-config':
         specifier: ^0.2.3
         version: 0.2.3(@typescript-eslint/utils@8.72.1(eslint@10.14.0(supports-color@8.1.1))(supports-color@8.1.1)(typescript@6.0.3))(eslint@10.14.0(supports-color@8.1.1))(supports-color@8.1.1)(typescript@6.0.3)
@@ -496,8 +496,8 @@ packages:
   '@isaacs/nonrecursive-glob-match@1.0.3':
     resolution: {integrity: sha512-SI7kyKHq4XXDRozw+r9GlRZkia1ZkFrpLW98r2IC2Bpr8YkFGE3fvjzmxCG0x78A++69HmDNrDvSMYBZmHGpKA==}
 
-  '@iveri/contracts@0.39.0':
-    resolution: {integrity: sha512-50SW+93yD5Q/ViQtMmK95+zoZIJSH92Y/oyjsDTRyJvrHY/f4VWqyfD0TVSIhLUAnXxDenWxOJtycPDMojOk+A==}
+  '@iveri/contracts@0.97.0':
+    resolution: {integrity: sha512-JkEkAXot7JCS7RuEP2wS7boS+I318u0FbDfd/6l85OQoK9IXGhHnIXD3Ib9B8C/KB1NpKBlLN46hDQmYtf3o7A==}
     engines: {node: '>=26'}
 
   '@iveri/eslint-config@0.2.3':
@@ -3131,7 +3131,7 @@ snapshots:
 
   '@isaacs/nonrecursive-glob-match@1.0.3': {}
 
-  '@iveri/contracts@0.39.0': {}
+  '@iveri/contracts@0.97.0': {}
 
   '@iveri/eslint-config@0.2.3(@typescript-eslint/utils@8.72.1(eslint@10.14.0(supports-color@8.1.1))(supports-color@8.1.1)(typescript@6.0.3))(eslint@10.14.0(supports-color@8.1.1))(supports-color@8.1.1)(typescript@6.0.3)':
     dependencies:

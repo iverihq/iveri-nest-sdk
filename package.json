@@ -1,6 +1,6 @@
 {
   "name": "@iveri/nest-sdk",
-  "version": "0.28.0",
+  "version": "0.29.0",
   "description": "Shared NestJS plumbing for Iveri services — request context, auth guards, envelope encryption, typed exceptions, tenant-scoped persistence, config validation, health, Redis, rate limiting, metrics and error reporting",
   "license": "MIT",
   "repository": {
@@ -23,6 +23,10 @@
     "./e2e": {
       "types": "./dist/e2e/index.d.ts",
       "default": "./dist/e2e/index.js"
+    },
+    "./licence": {
+      "types": "./dist/licence/index.d.ts",
+      "default": "./dist/licence/index.js"
     },
     "./service-token": {
       "types": "./dist/service-token/index.d.ts",
@@ -97,7 +101,7 @@
   },
   "devDependencies": {
     "@aws-sdk/client-s3": "^3.1163.0",
-    "@iveri/contracts": "^0.39.0",
+    "@iveri/contracts": "^0.97.0",
     "@iveri/eslint-config": "^0.2.3",
     "@iveri/prettier-config": "^0.1.0",
     "@iveri/tsconfig": "^0.2.1",
